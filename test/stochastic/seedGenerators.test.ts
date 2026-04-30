@@ -4,15 +4,15 @@ import { describe, expect, it } from "bun:test";
 
 describe('seed generators test suite', () => {
   describe('splitmix64', () => {
-    it('should be instantiable with any bigint as state, converting it to unsigned int 64 bits sized at maximum', () => {
-      const seedGenerator = new SplitMix64(42n)
-      expect(seedGenerator.state()).toBe(42n)
-
-      const seedGenerator2 = new SplitMix64(43n)
-      expect(seedGenerator2.state()).toBe(43n)
-
-      const seedGenerator3 = new SplitMix64((1n << 64n) + 123n)
-      expect(seedGenerator3.state()).toBe(123n)
-    })
+    it
+      .each([
+        { input: 42n, expectedState: 42n },
+        { input: 43n, expectedState: 43n },
+        { input: (1n << 64n) + 123n, expectedState: 123n }
+      ])
+      ('should be instantiable with any bigint as state, converting it to unsigned int 64 bits sized at maximum', (p) => {
+        const seedGenerator = new SplitMix64(p.input)
+        expect(seedGenerator.state()).toBe(p.expectedState)
+      })
   })
 })
