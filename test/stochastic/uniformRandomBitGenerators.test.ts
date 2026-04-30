@@ -11,6 +11,23 @@ describe('uniform random bit generators test suite', () => {
 
       expect(urbg.state()).not.toEqual([0n, 0n])
     })
+
+    it('should generate 1 000 000 different uint64 values when called 1 000 000 times', () => {
+      const seedGenerator = new SplitMix64(42n)
+      const urbg = new Xoroshiro128Plus(seedGenerator)
+
+      const values = new Map<bigint, number>
+      Array
+        .from({ length: 1000_000 }, () => urbg.newValue())
+        .forEach(value =>
+          values.set(value, (values.get(value) ?? 0) + 1))
+
+      const areAllValuesUint64 = [...values.keys()].filter(value => value > urbg.UINT64_MAX).length === 0
+      expect(areAllValuesUint64).toBeTrue()
+
+      const areAllValuesUnique = [...values.values()].filter(count => count > 1).length === 0
+      expect(areAllValuesUnique).toBeTrue()
+    })
   })
 })
 
