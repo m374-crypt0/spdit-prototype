@@ -1,8 +1,10 @@
-import type { SeedGenerator } from "./seedGenerators";
+import { SplitMix64, type SeedGenerator } from "./seedGenerators";
 
 export class Xoroshiro128Plus {
-  constructor(seedGenerator: SeedGenerator<bigint>) {
-    this.state_ = [seedGenerator.newSeed(), seedGenerator.newSeed()]
+  constructor(seedGenerator?: SeedGenerator<bigint>) {
+    const g = seedGenerator ?? new SplitMix64()
+
+    this.state_ = [g.newSeed(), g.newSeed()]
   }
 
   state() {

@@ -49,7 +49,25 @@ describe('uniform random bit generators test suite', () => {
       const areAllValuesUnique = [...values.values()].filter(count => count > 1).length === 0
       expect(areAllValuesUnique).toBeFalse()
     })
+
+    it('should be possible to rely on a default random engine for non-determistic value generation', () => {
+      const urbg1 = new Xoroshiro128Plus()
+      const urbg2 = new Xoroshiro128Plus()
+
+      const values = new Map<bigint, number>
+
+      Array
+        .from({ length: 100_000 }, () => urbg1.newValue())
+        .forEach(value =>
+          values.set(value, (values.get(value) ?? 0) + 1))
+
+      Array
+        .from({ length: 100_000 }, () => urbg2.newValue())
+        .forEach(value =>
+          values.set(value, (values.get(value) ?? 0) + 1))
+
+      const areAllValuesUnique = [...values.values()].filter(count => count > 1).length === 0
+      expect(areAllValuesUnique).toBeTrue()
+    })
   })
 })
-
-// TODO: default URBG instantiation
