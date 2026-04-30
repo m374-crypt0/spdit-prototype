@@ -7,6 +7,16 @@
     "target": "ESNext",
     "module": "Preserve",
     "moduleDetection": "force",
+    "baseUrl": ".",
+    "rootDirs": [],
+    "paths": {
+      "src/*": [
+        "./src/*"
+      ],
+      "test/*": [
+        "./test/*"
+      ]
+    },
     "jsx": "react-jsx",
     "allowJs": true,
     "types": [
