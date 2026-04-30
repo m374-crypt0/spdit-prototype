@@ -28,6 +28,27 @@ describe('uniform random bit generators test suite', () => {
       const areAllValuesUnique = [...values.values()].filter(count => count > 1).length === 0
       expect(areAllValuesUnique).toBeTrue()
     })
+
+    it('values are deterministically generated regarding an identical seed generator', () => {
+      const seedGenerator = new SplitMix64(42n)
+      const urbg = new Xoroshiro128Plus(seedGenerator)
+
+      const values = new Map<bigint, number>
+      Array
+        .from({ length: 100_000 }, () => urbg.newValue())
+        .forEach(value =>
+          values.set(value, (values.get(value) ?? 0) + 1))
+
+      const seedGenerator2 = new SplitMix64(42n)
+      const urbg2 = new Xoroshiro128Plus(seedGenerator2)
+      Array
+        .from({ length: 100_000 }, () => urbg2.newValue())
+        .forEach(value =>
+          values.set(value, (values.get(value) ?? 0) + 1))
+
+      const areAllValuesUnique = [...values.values()].filter(count => count > 1).length === 0
+      expect(areAllValuesUnique).toBeFalse()
+    })
   })
 })
 
