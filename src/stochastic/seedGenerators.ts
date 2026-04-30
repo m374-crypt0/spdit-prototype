@@ -1,6 +1,7 @@
 export class SplitMix64 {
-  constructor(state: bigint) {
-    this.state_ = state & this.UINT64_MAX
+  constructor(state?: bigint) {
+    const s = state ?? BigInt(Math.random().toFixed(20).slice(2))
+    this.state_ = s & this.UINT64_MAX
   }
 
   state() { return this.state_ }

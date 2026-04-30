@@ -19,8 +19,48 @@ describe('seed generators test suite', () => {
       const seedGenerator = new SplitMix64(42n)
 
       const seeds = new Map<bigint, number>
-      Array.from({ length: 1000_000 }, () => seedGenerator.newSeed()).forEach(seed =>
-        seeds.set(seed, (seeds.get(seed) ?? 0) + 1))
+      Array
+        .from({ length: 1000_000 }, () => seedGenerator.newSeed())
+        .forEach(seed =>
+          seeds.set(seed, (seeds.get(seed) ?? 0) + 1))
+
+      const areAllSeedsUnique = [...seeds.values()].filter(count => count > 1).length === 0
+      expect(areAllSeedsUnique).toBeTrue()
+    })
+
+    it('seeds are deterministically generated regarding an initial state value', () => {
+      const seedGenerator = new SplitMix64(42n)
+
+      const seeds = new Map<bigint, number>
+      Array
+        .from({ length: 100_000 }, () => seedGenerator.newSeed())
+        .forEach(seed =>
+          seeds.set(seed, (seeds.get(seed) ?? 0) + 1))
+
+      const seedGenerator2 = new SplitMix64(42n)
+      Array
+        .from({ length: 100_000 }, () => seedGenerator2.newSeed())
+        .forEach(seed =>
+          seeds.set(seed, (seeds.get(seed) ?? 0) + 1))
+
+      const areAllSeedsUnique = [...seeds.values()].filter(count => count > 1).length === 0
+      expect(areAllSeedsUnique).toBeFalse()
+    })
+
+    it('should be possible to rely on a default random engine for non-determistic seed generation', () => {
+      const seedGenerator1 = new SplitMix64()
+      const seedGenerator2 = new SplitMix64()
+      const seeds = new Map<bigint, number>
+
+      Array
+        .from({ length: 100_000 }, () => seedGenerator1.newSeed())
+        .forEach(seed =>
+          seeds.set(seed, (seeds.get(seed) ?? 0) + 1))
+
+      Array
+        .from({ length: 100_000 }, () => seedGenerator2.newSeed())
+        .forEach(seed =>
+          seeds.set(seed, (seeds.get(seed) ?? 0) + 1))
 
       const areAllSeedsUnique = [...seeds.values()].filter(count => count > 1).length === 0
       expect(areAllSeedsUnique).toBeTrue()
