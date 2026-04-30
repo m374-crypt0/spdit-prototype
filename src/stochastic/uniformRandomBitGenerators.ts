@@ -1,6 +1,11 @@
 import { SplitMix64, type SeedGenerator } from "./seedGenerators";
 
-export class Xoroshiro128Plus {
+export type UniformRandomBitGenerator<State, Value> = {
+  state: () => State,
+  newValue: () => Value
+}
+
+export class Xoroshiro128Plus implements UniformRandomBitGenerator<[bigint, bigint], bigint> {
   constructor(seedGenerator?: SeedGenerator<bigint>) {
     const g = seedGenerator ?? new SplitMix64()
 
@@ -8,7 +13,7 @@ export class Xoroshiro128Plus {
   }
 
   state() {
-    return this.state_.slice()
+    return this.state_.slice() as [bigint, bigint]
   }
 
   newValue() {
