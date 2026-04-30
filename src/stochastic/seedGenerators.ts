@@ -1,4 +1,9 @@
-export class SplitMix64 {
+export type SeedGenerator<T> = {
+  state: () => T
+  newSeed: () => T
+}
+
+export class SplitMix64 implements SeedGenerator<bigint> {
   constructor(state?: bigint) {
     const s = state ?? BigInt(Math.random().toFixed(20).slice(2))
     this.state_ = s & this.UINT64_MAX
