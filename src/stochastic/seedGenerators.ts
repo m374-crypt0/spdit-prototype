@@ -19,6 +19,7 @@ export class SplitMix64 implements SeedGenerator<bigint> {
     return z
   }
 
+  // TODO: refactor, common everywhere
   readonly UINT64_MAX: bigint = (1n << 64n) - 1n
 
   private state_: bigint

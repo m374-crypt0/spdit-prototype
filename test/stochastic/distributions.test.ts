@@ -14,5 +14,14 @@ describe('distributions test suite', () => {
 
       expect(value >= 10n && value <= 20n).toBeTrue()
     })
+
+    it('should fail to query a value bigger than biggest unsigned int 64 bits sized', () => {
+      const seedGenerator: SeedGenerator<bigint> = new SplitMix64(42n)
+      const urbg: UniformRandomBitGenerator<[bigint, bigint], bigint> = new Xoroshiro128Plus(seedGenerator)
+      const distribution = new UniformUint64(urbg)
+
+      expect(() => { distribution.newUint64([1n << 62n, 1n << 70n]) }).toThrowError("range overflow uint64")
+      expect(() => { distribution.newUint64([1n << 68n, 1n << 56n]) }).toThrowError("range overflow uint64")
+    })
   })
 })
