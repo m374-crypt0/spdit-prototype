@@ -1,5 +1,6 @@
-import { describe, expect, it, xit } from "bun:test";
 import { shuffleArray, shuffleBuffer, SplitMix64, UniformUint64, Xoroshiro128Plus } from "src/stochastic";
+
+import { describe, expect, it } from "bun:test";
 
 describe('utils test suite', () => {
   describe('shuffle sequence', () => {

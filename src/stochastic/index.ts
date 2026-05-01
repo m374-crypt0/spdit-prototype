@@ -4,11 +4,7 @@ import { Xoroshiro128Plus, type UniformRandomBitGenerator } from "./uniformRando
 import { shuffleArray, shuffleBuffer } from "./utils";
 
 export {
-  SplitMix64,
-  type SeedGenerator,
-  Xoroshiro128Plus,
-  type UniformRandomBitGenerator,
-  UniformUint64,
-  type UniformUintDistribution,
-  shuffleArray, shuffleBuffer
-}
+  shuffleArray, shuffleBuffer,
+  SplitMix64, UniformUint64, Xoroshiro128Plus,
+  type SeedGenerator, type UniformRandomBitGenerator, type UniformUintDistribution
+};
