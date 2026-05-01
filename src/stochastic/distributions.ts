@@ -1,11 +1,15 @@
 import type { UniformRandomBitGenerator } from "./uniformRandomBitGenerators";
 
-export class UniformUint64<State, Value extends number | bigint> {
+export type UniformUintDistribution<Uint> = {
+  newUint: (range: [Uint, Uint]) => Uint
+}
+
+export class UniformUint64<State, Value extends number | bigint> implements UniformUintDistribution<bigint> {
   constructor(urbg: UniformRandomBitGenerator<State, Value>) {
     this.urbg = urbg
   }
 
-  newUint64(range: [bigint, bigint]) {
+  newUint(range: [bigint, bigint]) {
     const [min, max] = [
       range[0] < range[1] ? range[0] : range[1],
       range[1] > range[0] ? range[1] : range[0]]

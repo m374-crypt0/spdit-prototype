@@ -9,7 +9,7 @@ describe('distributions test suite', () => {
       const urbg: UniformRandomBitGenerator<[bigint, bigint], bigint> = new Xoroshiro128Plus(seedGenerator)
       const distribution = new UniformUint64(urbg)
 
-      const value = distribution.newUint64([10n, 20n])
+      const value = distribution.newUint([10n, 20n])
 
       expect(value >= 10n && value <= 20n).toBeTrue()
     })
@@ -19,8 +19,8 @@ describe('distributions test suite', () => {
       const urbg: UniformRandomBitGenerator<[bigint, bigint], bigint> = new Xoroshiro128Plus(seedGenerator)
       const distribution = new UniformUint64(urbg)
 
-      expect(() => { distribution.newUint64([1n << 62n, 1n << 70n]) }).toThrowError("range overflow uint64")
-      expect(() => { distribution.newUint64([1n << 68n, 1n << 56n]) }).toThrowError("range overflow uint64")
+      expect(() => { distribution.newUint([1n << 62n, 1n << 70n]) }).toThrowError("range overflow uint64")
+      expect(() => { distribution.newUint([1n << 68n, 1n << 56n]) }).toThrowError("range overflow uint64")
     })
 
     it('should produce a uniform distribution over a given range (chi-square goodness-of-fit)', () => {
@@ -35,7 +35,7 @@ describe('distributions test suite', () => {
       const occurences = new Array(bins).fill(0)
 
       Array
-        .from({ length: samples }, () => distribution.newUint64(range))
+        .from({ length: samples }, () => distribution.newUint(range))
         .forEach(value => occurences[Number(value)]!++)
 
       const expected = samples / bins
