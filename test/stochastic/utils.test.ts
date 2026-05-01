@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, xit } from "bun:test";
 import { shuffleArray, shuffleBuffer, SplitMix64, UniformUint64, Xoroshiro128Plus } from "src/stochastic";
 
 describe('utils test suite', () => {
@@ -31,6 +31,17 @@ describe('utils test suite', () => {
 
       expect(newArray).toEqual(newArray2)
       expect(newBuffer).toEqual(newBuffer2)
+    })
+
+    it('should non deterministically shuffle', () => {
+      const array = Array.from({ length: 16 }, (_, i) => i)
+      const shuffledArray = shuffleArray(array)
+      const shuffledArray2 = shuffleArray(array)
+
+      expect(shuffledArray).not.toEqual(array)
+      expect(shuffledArray.reduce((acc, cur) => acc + cur, 0)).toBe(120)
+      expect(new Set(shuffledArray).size).toBe(16)
+      expect(shuffledArray).not.toEqual(shuffledArray2)
     })
   })
 })

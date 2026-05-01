@@ -1,12 +1,12 @@
-import type { UniformRandomBitGenerator } from "./uniformRandomBitGenerators";
+import { Xoroshiro128Plus, type UniformRandomBitGenerator } from "./uniformRandomBitGenerators";
 
 export type UniformUintDistribution<Uint> = {
   newUint: (range: [Uint, Uint]) => Uint
 }
 
-export class UniformUint64<State, Value extends number | bigint> implements UniformUintDistribution<bigint> {
-  constructor(urbg: UniformRandomBitGenerator<State, Value>) {
-    this.urbg = urbg
+export class UniformUint64 implements UniformUintDistribution<bigint> {
+  constructor(urbg?: UniformRandomBitGenerator<[bigint, bigint], bigint>) {
+    this.urbg = urbg ?? new Xoroshiro128Plus
   }
 
   newUint(range: [bigint, bigint]) {
@@ -22,7 +22,7 @@ export class UniformUint64<State, Value extends number | bigint> implements Unif
     while (true) {
       const x = this.urbg.newValue()
       const m = BigInt(x) * r
-      const low = m & this.UINT64_MAX // 65 bits
+      const low = m & this.UINT64_MAX // 65 bits at least
       const threshold = (this.UINT65 - r) % r
 
       if (low >= threshold)
@@ -34,5 +34,5 @@ export class UniformUint64<State, Value extends number | bigint> implements Unif
   readonly UINT64_MAX: bigint = (1n << 64n) - 1n
   readonly UINT65: bigint = 1n << 64n
 
-  private urbg: UniformRandomBitGenerator<State, Value>
+  private urbg: UniformRandomBitGenerator<[bigint, bigint], bigint>
 }
