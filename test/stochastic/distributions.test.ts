@@ -1,7 +1,6 @@
+import { SplitMix64, UniformUint64, Xoroshiro128Plus, type SeedGenerator, type UniformRandomBitGenerator } from "src/stochastic";
+
 import { describe, expect, it } from "bun:test";
-import { UniformUint64 } from "src/stochastic";
-import { SplitMix64, type SeedGenerator } from "src/stochastic";
-import { Xoroshiro128Plus, type UniformRandomBitGenerator } from "src/stochastic";
 
 describe('distributions test suite', () => {
   describe('uniform uint64', () => {
