@@ -7,7 +7,6 @@
     "target": "ESNext",
     "module": "Preserve",
     "moduleDetection": "force",
-    "baseUrl": ".",
     "rootDirs": [],
     "paths": {
       "src/*": [
