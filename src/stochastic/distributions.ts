@@ -30,7 +30,6 @@ export class UniformUint64 implements UniformUintDistribution<bigint> {
     }
   }
 
-  // TODO: refactor, common everywhere
   readonly UINT64_MAX: bigint = (1n << 64n) - 1n
   readonly UINT65: bigint = 1n << 64n
 

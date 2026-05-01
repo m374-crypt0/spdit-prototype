@@ -31,7 +31,6 @@ export class Xoroshiro128Plus implements UniformRandomBitGenerator<[bigint, bigi
     return result;
   }
 
-  // TODO: refactor, common everywhere
   readonly UINT64_MAX: bigint = (1n << 64n) - 1n
 
   private rotl(x: bigint, k: bigint) {
