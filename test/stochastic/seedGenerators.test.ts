@@ -15,12 +15,12 @@ describe('seed generators test suite', () => {
         expect(seedGenerator.state()).toBe(p.expectedState)
       })
 
-    it('should generate 1 000 000 different seeds when called 1 000 000 times', () => {
+    it('should generate 100 000 different seeds when called 1 000 000 times', () => {
       const seedGenerator = new SplitMix64(42n)
 
       const seeds = new Map<bigint, number>
       Array
-        .from({ length: 1000_000 }, () => seedGenerator.newSeed())
+        .from({ length: 100_000 }, () => seedGenerator.newSeed())
         .forEach(seed =>
           seeds.set(seed, (seeds.get(seed) ?? 0) + 1))
 

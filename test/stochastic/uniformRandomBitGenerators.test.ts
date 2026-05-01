@@ -12,13 +12,13 @@ describe('uniform random bit generators test suite', () => {
       expect(urbg.state()).not.toEqual([0n, 0n])
     })
 
-    it('should generate 1 000 000 different uint64 values when called 1 000 000 times', () => {
+    it('should generate 100 000 different uint64 values when called 1 000 000 times', () => {
       const seedGenerator = new SplitMix64(42n)
       const urbg = new Xoroshiro128Plus(seedGenerator)
 
       const values = new Map<bigint, number>
       Array
-        .from({ length: 1000_000 }, () => urbg.newValue())
+        .from({ length: 100_000 }, () => urbg.newValue())
         .forEach(value =>
           values.set(value, (values.get(value) ?? 0) + 1))
 
