@@ -1,5 +1,5 @@
 export class SPD {
-  constructor() {
+  constructor(type: 'low' | 'high') {
     this.buffer = new ArrayBuffer()
   }
 

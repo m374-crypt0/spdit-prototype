@@ -4,10 +4,12 @@ import { describe, expect, it } from "bun:test";
 
 describe('SPD test suite', () => {
   describe('creation', () => {
-    it('should create a valid SPD with iterable properties', () => {
-      const spd = new SPD()
+    it('should create a valid low SPD with iterable properties', () => {
+      const lowSPD = new SPD('low')
+      const highSPD = new SPD('high')
 
-      expect(spd[Symbol.iterator]).not.toBeUndefined()
+      expect(lowSPD[Symbol.iterator]).not.toBeUndefined()
+      expect(highSPD[Symbol.iterator]).not.toBeUndefined()
     })
   })
 })
