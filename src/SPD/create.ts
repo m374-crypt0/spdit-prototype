@@ -3,7 +3,7 @@ export class SPD {
     this.buffer = new ArrayBuffer()
   }
 
-  [Symbol.iterator] = () => this.buffer
+  [Symbol.iterator] = () => Iterator.from(Buffer.from(this.buffer))
 
   private buffer: ArrayBuffer
 }
