@@ -36,9 +36,31 @@ describe('SPD test suite', () => {
         const set = new Set<string>
 
         Iterator.from(spd)
-          .forEach(laneIterator => set.add(laneIterator.toArray().join()))
+          .forEach(laneIterator => set.add(laneIterator.toArray().join('')))
 
         expect(set.size).toBe(spd.laneSize)
+      })
+
+    it.each(['low', 'high'])
+      ('should have each lane with some missing or duplicated values', (spdType) => {
+        const spd = new SPD(spdType)
+        const maps: Array<Map<number, number>> = []
+
+        Iterator.from(spd)
+          .forEach(laneIterator => {
+            const m = new Map<number, number>()
+            laneIterator.forEach(k => m.set(k, (m.get(k) ?? 0) + 1))
+            maps.push(m)
+          })
+
+        expect(maps.length).toBeGreaterThan(0)
+
+        expect(spd.size).toBe(maps
+          .map(m => m.values().toArray())
+          .flat()
+          .reduce((acc, v) => acc + v, 0))
+
+        expect(maps.some(m => m.size < spd.laneSize)).toBeTrue()
       })
   })
 })

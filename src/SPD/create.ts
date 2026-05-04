@@ -7,11 +7,8 @@ export class SPD {
     this.buffer = new ArrayBuffer(this.size, { maxByteLength: this.size })
     this.bufferView = Buffer.from(this.buffer)
 
-    Iterator.from(this)
-      .forEach((_, laneIndex) =>
-        this.bufferView.set(
-          shuffleArray(Array.from({ length: this.laneSize }, (_, i) => i)),
-          this.laneSize * laneIndex))
+    this.generateLanes()
+    this.rotateBuffer()
   }
 
   readonly [Symbol.iterator] = () => {
@@ -31,4 +28,21 @@ export class SPD {
   readonly bufferView: Buffer<ArrayBuffer>
 
   private buffer: ArrayBuffer
+
+  private generateLanes() {
+    Iterator.from(this)
+      .forEach((_, laneIndex) => this.bufferView.set(
+        shuffleArray(Array.from({ length: this.laneSize }, (_, i) => i)),
+        this.laneSize * laneIndex))
+  }
+
+  private rotateBuffer() {
+    for (let i = 0; i < this.laneSize; i++) {
+      for (let j = i; j < this.laneSize; j++) {
+        this.bufferView[i * this.laneSize + j]! ^= this.bufferView[j * this.laneSize + i]!
+        this.bufferView[j * this.laneSize + i]! ^= this.bufferView[i * this.laneSize + j]!
+        this.bufferView[i * this.laneSize + j]! ^= this.bufferView[j * this.laneSize + i]!
+      }
+    }
+  }
 }
