@@ -5,10 +5,11 @@ import { describe, expect, it } from "bun:test";
 describe('SPD test suite', () => {
   describe('creation', () => {
     it.each(['low', 'high'])
-      ('should create a valid low SPD with iterable properties', spdType => {
+      ('should create a valid SPD objects with iterable lanes', spdType => {
         const spd = new SPD(spdType)
 
-        expect(Iterator.from(spd)).not.toBeUndefined()
+        expect(spd.size).toBe(spd.laneSize ** 2)
+        expect(Iterator.from(spd).toArray().length).toBe(spd.laneSize)
       })
   })
 })
