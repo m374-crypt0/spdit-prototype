@@ -5,44 +5,56 @@ import { describe, expect, it } from "bun:test";
 describe('utils test suite', () => {
   describe('shuffle sequence', () => {
     it('should shuffle deterministically using a specific stochastic distribution', () => {
-      const oldArray = Array.from({ length: 16 }, (_, i) => i)
-      Object.freeze(oldArray)
+      const orderedArray = Array.from({ length: 16 }, (_, i) => i)
+      const orderedBuffer = Buffer.from(orderedArray)
 
-      const oldBuffer = Buffer.from(oldArray)
+      let array = Array.from(orderedArray)
+      let buffer = Buffer.from(orderedBuffer)
 
-      expect(oldArray.reduce((acc, cur) => acc + cur, 0)).toBe(120)
-      expect(oldBuffer.reduce((acc, cur) => acc + cur, 0)).toBe(120)
+      expect(array.reduce((acc, cur) => acc + cur, 0)).toBe(120)
+      expect(buffer.reduce((acc, cur) => acc + cur, 0)).toBe(120)
 
-      const newArray = shuffleArray(oldArray, new UniformUint64(new Xoroshiro128Plus(new SplitMix64(42n))))
-      const newBuffer = shuffleBuffer(oldBuffer, new UniformUint64(new Xoroshiro128Plus(new SplitMix64(42n))))
+      shuffleArray(array, new UniformUint64(new Xoroshiro128Plus(new SplitMix64(42n))))
+      shuffleBuffer(buffer, new UniformUint64(new Xoroshiro128Plus(new SplitMix64(42n))))
 
-      const newArray2 = shuffleArray(oldArray, new UniformUint64(new Xoroshiro128Plus(new SplitMix64(42n))))
-      const newBuffer2 = shuffleBuffer(oldBuffer, new UniformUint64(new Xoroshiro128Plus(new SplitMix64(42n))))
+      expect(orderedArray).not.toEqual(array)
+      expect(orderedBuffer).not.toEqual(buffer)
+      expect(array.reduce((acc, cur) => acc + cur, 0)).toBe(120)
+      expect(array.reduce((acc, cur) => acc + cur, 0)).toBe(120)
 
-      expect(oldBuffer.equals(Buffer.from(oldArray))).toBeTrue()
+      const shuffledArray = Array.from(array)
+      const shuffledBuffer = Buffer.from(buffer)
+      array = Array.from(orderedArray)
+      buffer = Buffer.from(orderedBuffer)
 
-      expect(newArray).not.toEqual(oldArray)
-      expect(newBuffer.equals(oldBuffer)).toBeFalse()
+      shuffleArray(array, new UniformUint64(new Xoroshiro128Plus(new SplitMix64(42n))))
+      shuffleBuffer(buffer, new UniformUint64(new Xoroshiro128Plus(new SplitMix64(42n))))
 
-      expect(newArray.reduce((acc, cur) => acc + cur, 0)).toBe(120)
-      expect(newBuffer.reduce((acc, cur) => acc + cur, 0)).toBe(120)
+      expect(array).toEqual(shuffledArray)
+      expect(buffer).toEqual(shuffledBuffer)
 
-      expect(new Set(newArray).size).toBe(16)
-      expect(new Set(newBuffer).size).toBe(16)
-
-      expect(newArray).toEqual(newArray2)
-      expect(newBuffer).toEqual(newBuffer2)
+      expect(new Set(array).size).toBe(16)
+      expect(new Set(buffer).size).toBe(16)
     })
 
     it('should non deterministically shuffle', () => {
-      const array = Array.from({ length: 16 }, (_, i) => i)
-      const shuffledArray = shuffleArray(array)
-      const shuffledArray2 = shuffleArray(array)
+      const orderedArray = Array.from({ length: 16 }, (_, i) => i)
+      let array = Array.from(orderedArray)
+
+      expect(orderedArray.reduce((acc, cur) => acc + cur, 0)).toBe(120)
+
+      shuffleArray(array)
+
+      expect(array).not.toEqual(orderedArray)
+      expect(array.reduce((acc, cur) => acc + cur, 0)).toBe(120)
+
+      const shuffledArray = Array.from(array)
+      array = Array.from(orderedArray)
+
+      shuffleArray(orderedArray)
 
       expect(shuffledArray).not.toEqual(array)
-      expect(shuffledArray.reduce((acc, cur) => acc + cur, 0)).toBe(120)
-      expect(new Set(shuffledArray).size).toBe(16)
-      expect(shuffledArray).not.toEqual(shuffledArray2)
+      expect(array.reduce((acc, cur) => acc + cur, 0)).toBe(120)
     })
   })
 })

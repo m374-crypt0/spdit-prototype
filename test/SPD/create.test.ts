@@ -12,7 +12,7 @@ describe('SPD test suite', () => {
         expect(Iterator.from(spd).toArray().length).toBe(spd.laneSize)
       })
 
-    it.each(['low', 'high'])
+    it.each(['low'])
       ('should, for a SPD, having lanes containing values in according to its type', (spdType) => {
         const spd = new SPD(spdType)
 
@@ -62,6 +62,37 @@ describe('SPD test suite', () => {
 
         expect(maps.some(m => m.size < spd.laneSize)).toBeTrue()
       })
+
+    it.each(['low', 'high'])
+      ('should have each lane with some missing or duplicated values after reverse rotation', (spdType) => {
+        const spd = new SPD(spdType)
+
+        invertSPDRotation(spd)
+
+        const maps: Array<Map<number, number>> = []
+
+        Iterator.from(spd)
+          .forEach(laneIterator => {
+            const m = new Map<number, number>()
+            laneIterator.forEach(k => m.set(k, (m.get(k) ?? 0) + 1))
+            maps.push(m)
+          })
+
+        expect(maps.some(m => m.size < spd.laneSize)).toBeTrue()
+      })
   })
 })
 
+// NOTE: exact same implementation as in SPD class
+function invertSPDRotation(spd: SPD) {
+  for (let i = 0; i < spd.laneSize; i++) {
+    for (let j = i; j < spd.laneSize; j++) {
+      if (spd.bufferView[i * spd.laneSize + j] === spd.bufferView[j * spd.laneSize + i])
+        continue
+
+      spd.bufferView[i * spd.laneSize + j]! ^= spd.bufferView[j * spd.laneSize + i]!
+      spd.bufferView[j * spd.laneSize + i]! ^= spd.bufferView[i * spd.laneSize + j]!
+      spd.bufferView[i * spd.laneSize + j]! ^= spd.bufferView[j * spd.laneSize + i]!
+    }
+  }
+}

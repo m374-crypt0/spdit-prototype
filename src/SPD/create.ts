@@ -1,4 +1,4 @@
-import { shuffleArray } from "src/stochastic"
+import { shuffleArray, shuffleBuffer } from "src/stochastic"
 
 export class SPD {
   constructor(type: 'low' | 'high') {
@@ -9,6 +9,7 @@ export class SPD {
 
     this.generateLanes()
     this.rotateBuffer()
+    this.shuffleLanes()
   }
 
   readonly [Symbol.iterator] = () => {
@@ -31,18 +32,29 @@ export class SPD {
 
   private generateLanes() {
     Iterator.from(this)
-      .forEach((_, laneIndex) => this.bufferView.set(
-        shuffleArray(Array.from({ length: this.laneSize }, (_, i) => i)),
-        this.laneSize * laneIndex))
+      .forEach((_, laneIndex) => {
+        const a = Array.from({ length: this.laneSize }, (_, i) => i)
+        shuffleArray(a)
+        this.bufferView.set(a, this.laneSize * laneIndex)
+      })
   }
 
   private rotateBuffer() {
     for (let i = 0; i < this.laneSize; i++) {
       for (let j = i; j < this.laneSize; j++) {
+        if (this.bufferView[i * this.laneSize + j] === this.bufferView[j * this.laneSize + i])
+          continue
+
         this.bufferView[i * this.laneSize + j]! ^= this.bufferView[j * this.laneSize + i]!
         this.bufferView[j * this.laneSize + i]! ^= this.bufferView[i * this.laneSize + j]!
         this.bufferView[i * this.laneSize + j]! ^= this.bufferView[j * this.laneSize + i]!
       }
     }
+  }
+
+  private shuffleLanes() {
+    Iterator.from(this)
+      .forEach((_, i) =>
+        shuffleBuffer(this.bufferView.subarray(this.laneSize * i, this.laneSize * (i + 1))))
   }
 }
