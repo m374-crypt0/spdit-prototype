@@ -45,6 +45,7 @@ I've some ideas I need to test, demonstrate, and make understandable.
     - No, because, if rotated in the other way around, an horizontally shuffled
       only *SPD* is recognizable
     - The solution: rotate it, then re-shuffle horizontally.
+      - This way I do not need to modify the *shuffle* utility
 - I noticed *decoding* is really fast (only lookup) but encoding is sub-optimal
   (functional style array reconstruction + shuffling)
   - a *SPD* must be switched both for *encoding* and *decoding*
@@ -56,3 +57,6 @@ I've some ideas I need to test, demonstrate, and make understandable.
       - encoding *SPD* is (512 to 128k bytes)
         - Could be reduced to (256 to 64k bytes) by sacrificing vertical
           shuffling. It is an unacceptable security trade off.
+      - encoding *SPD* is an implementation detail. It means it will never be
+        stored or transmitted as is. Only the decoding *SPD* is to be stored or
+        transmitted.
