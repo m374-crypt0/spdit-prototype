@@ -12,6 +12,7 @@ describe('SPD test suite', () => {
         expect(Iterator.from(spd).toArray().length).toBe(spd.laneSize)
       })
 
+    // TODO: parameterize for high SPD too
     it('should, for a low SPD, having 16 lanes containing values in [0, 15]', () => {
       const spd = new SPD('low')
 
@@ -27,6 +28,16 @@ describe('SPD test suite', () => {
 
       expect(areValuesInRange).toBeTrue()
       expect(areAllValuesNotZero).toBeTrue()
+    })
+
+    it('should have each lane shuffled into a SPD', () => {
+      const spd = new SPD('low')
+      const set = new Set<string>
+
+      Iterator.from(spd)
+        .forEach(laneIterator => set.add(laneIterator.toArray().join()))
+
+      expect(set.size).toBe(spd.laneSize)
     })
   })
 })

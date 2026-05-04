@@ -1,3 +1,5 @@
+import { shuffleArray } from "src/stochastic"
+
 export class SPD {
   constructor(type: 'low' | 'high') {
     this.laneSize = type === 'low' ? 16 : 256
@@ -5,8 +7,11 @@ export class SPD {
     this.buffer = new ArrayBuffer(this.size, { maxByteLength: this.size })
     this.bufferView = Buffer.from(this.buffer)
 
-    this.bufferView
-      .forEach((_, i) => this.bufferView.writeUint8(i % this.laneSize, i))
+    Iterator.from(this)
+      .forEach((_, laneIndex) =>
+        this.bufferView.set(
+          shuffleArray(Array.from({ length: this.laneSize }, (_, i) => i)),
+          this.laneSize * laneIndex))
   }
 
   readonly [Symbol.iterator] = () => {
