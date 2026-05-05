@@ -14,11 +14,6 @@ There are 2 topics that are of utmost importance so far:
 1. seeded hashing
 2. *SPD* peer-to-peer exchange
 
-## Seeded hashing
-
-I've built a clear mental model about this one, I do not plan anymore
-difficulty so I will work on that later on.
-
 ## *SPD* peer-to-peer exchange
 
 This one make me loose some hair... Actively working on, I'll start by this one.
@@ -60,3 +55,13 @@ I've some ideas I need to test, demonstrate, and make understandable.
       - encoding *SPD* is an implementation detail. It means it will never be
         stored or transmitted as is. Only the decoding *SPD* is to be stored or
         transmitted.
+- [x] DONE
+
+### Third task: transcoding
+
+- especially transcoding *high SPD* using *low SPD*
+
+## Seeded hashing
+
+I've built a clear mental model about this one, I do not plan anymore
+difficulty so I will work on that later on.
