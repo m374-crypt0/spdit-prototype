@@ -59,7 +59,16 @@ I've some ideas I need to test, demonstrate, and make understandable.
 
 ### Third task: transcoding
 
-- especially transcoding *high SPD* using *low SPD*
+- Create a *Transcoder* class having responsibility to:
+  - make *encoding* and *decoding* performant operations (lookup for both)
+  - default constructible generating default *high SPD* and *low SPD*
+  - constructible with user-provided *high SPD* and *low SPD*
+  - encode and decode *high SPD* (useful for future *high SPD* exchange
+    feature, need *low SPD*)
+  - deterministic *encoding*, needed for *high SPD* exchange feature
+    (intuition) and for *seeded hashing*
+  - encode and decode any content (need a *high SPD*)
+  - handle a state composed of *high SPD* and *low SPD*, immutable once set
 
 ## Seeded hashing
 
