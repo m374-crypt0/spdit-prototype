@@ -12,7 +12,7 @@ describe('SPD test suite', () => {
         expect(Iterator.from(spd).toArray().length).toBe(spd.laneSize)
       })
 
-    it.each(['low'])
+    it.each(['low', 'high'])
       ('should, for a SPD, having lanes containing values in according to its type', (spdType) => {
         const spd = new SPD(spdType)
 
@@ -67,7 +67,7 @@ describe('SPD test suite', () => {
       ('should have each lane with some missing or duplicated values after reverse rotation', (spdType) => {
         const spd = new SPD(spdType)
 
-        invertSPDRotation(spd)
+        transposeSPDBuffer(spd)
 
         const maps: Array<Map<number, number>> = []
 
@@ -80,11 +80,25 @@ describe('SPD test suite', () => {
 
         expect(maps.some(m => m.size < spd.laneSize)).toBeTrue()
       })
+
+    it.each(['low', 'high'])
+      ('should verify content properties', (spdType) => {
+        const spd = new SPD(spdType)
+
+        const n = spd.laneSize - 1
+        const notExpectedSum = spd.laneSize * (n * (n + 1)) / 2
+
+        const sum = Iterator.from(spd)
+          .map(it => it.reduce((acc, cur) => acc + cur, 0))
+          .reduce((acc, cur) => acc + cur, 0)
+
+        expect(notExpectedSum).not.toBe(sum)
+      })
   })
 })
 
 // NOTE: exact same implementation as in SPD class
-function invertSPDRotation(spd: SPD) {
+function transposeSPDBuffer(spd: SPD) {
   for (let i = 0; i < spd.laneSize; i++) {
     for (let j = i; j < spd.laneSize; j++) {
       if (spd.bufferView[i * spd.laneSize + j] === spd.bufferView[j * spd.laneSize + i])
@@ -95,4 +109,20 @@ function invertSPDRotation(spd: SPD) {
       spd.bufferView[i * spd.laneSize + j]! ^= spd.bufferView[j * spd.laneSize + i]!
     }
   }
+}
+
+// NOTE: for human vizualization purposes
+function inspectSPDBuffer(spd: SPD) {
+  const m = new Map<number, number>
+
+  Iterator.from(spd)
+    .forEach(it => it
+      .forEach(k =>
+        m.set(k, (m.get(k) ?? 0) + 1)))
+
+  const sortedMap = new Map(m.entries().toArray()
+    .sort((a, b) => a[1] - b[1])
+    .map((e, i) => [`i:${i};c:${e[0]}`, e[1]]))
+
+  console.error(sortedMap)
 }
