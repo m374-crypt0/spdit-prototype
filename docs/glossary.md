@@ -25,6 +25,13 @@
 - **information theoretically secured** aka. unconditional security, is a
   system that is secured even in presence of adversarial behavior having
   unlimited computing resource and time. *SPDIT* plays in this category.
+- **hashing** function are able to map data of arbitrary size to a fixed-size
+  value. A good *hashing* function must have mandatory properties such as
+  minimizing duplication of output values, producing output values uniformly
+  regarding a probabilistic distribution. *Hash* function might be susceptible
+  to be broken by an efficient implementation of the *Grover's algorithm*.
+  *SPDIT* uses its own *hashing* function that is *information theoretically
+  secured* named *shi7*
 - **High SPD** pronounced *High Speed* is one type of *SPD*. It is a
   *transcoding* table that contains a high amount of *entropy* and is designed to
   *encode* any kind of data disregarding its size. A *high SPD* is 64kb in size
@@ -36,6 +43,10 @@
   them to be exchanged and establish communication between two parties at least.
 - **Quantum algorithms** aiming to break *cryptography* primitives discussed
   here are *Shor's algorithm* and *Grover's Algorithm*
+- **shi7** aka *seeded stochastic hashing by information transcoding* is the
+  *SPDIT* implementation of a *hashing* function. It is an open research field
+  and need to be implemented and evaluated regarding existing *hashing* function
+  properties and *quantum algorithm* resistance.
 - **Shor's Algorithm** is a *quantum algorithm* that is potentially able to
   resolve the factoring problem, the discrete logarithm problem and the period
   finding problem. Given a **sufficiently stable and powerful** quantum
