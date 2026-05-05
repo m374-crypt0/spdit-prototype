@@ -16,13 +16,12 @@ export class SPD {
     this.laneSize = type === 'low' ? 16 : 256
     this.size = this.laneSize ** 2
     this.buffer = new ArrayBuffer(this.size, { maxByteLength: this.size })
-    this.bufferView = Buffer.from(this.buffer)
 
     this.generateLanes()
     this.shuffleLanes()
-    this.rotateBuffer()
+    this.transposeBuffer()
     this.shuffleLanes()
-    this.overwriteFewLaneValues()
+    this.overwriteFewValuesInAllLanes()
   }
 
   /**
@@ -33,6 +32,15 @@ export class SPD {
       for (let i = 0; i < ls; i++)
         yield Iterator.from(Buffer.from(b)).drop(i * ls).take(ls)
     })(this.buffer, this.laneSize)
+
+  /**
+   * Get a view on the underlying storage for this SPD instance.
+   * Allows reading to the underlying buffer
+   * @returns a readonly buffer view on underlying buffer storage
+   */
+  readonlyBufferView(): Readonly<Buffer<ArrayBuffer>> {
+    return Buffer.from(this.buffer)
+  }
 
   /**
    * The size of each lane of this SPD instance. Depends of SPD type: 'low'
@@ -48,30 +56,31 @@ export class SPD {
    */
   readonly size: number
 
-  /**
-   * A view on the underlying storage for this SPD instance.
-   */
-  readonly bufferView: Buffer<ArrayBuffer>
-
   private buffer: ArrayBuffer
+
+  private bufferView() {
+    return Buffer.from(this.buffer)
+  }
 
   private generateLanes() {
     Iterator.from(this)
       .forEach((_, laneIndex) =>
-        this.bufferView.set(Array.from({ length: this.laneSize },
+        this.bufferView().set(Array.from({ length: this.laneSize },
           (_, i) => i), this.laneSize * laneIndex)
       )
   }
 
-  private rotateBuffer() {
+  private transposeBuffer() {
+    const bufferView = this.bufferView()
+
     for (let i = 0; i < this.laneSize; i++) {
       for (let j = i; j < this.laneSize; j++) {
-        if (this.bufferView[i * this.laneSize + j] === this.bufferView[j * this.laneSize + i])
+        if (bufferView[i * this.laneSize + j] === bufferView[j * this.laneSize + i])
           continue
 
-        this.bufferView[i * this.laneSize + j]! ^= this.bufferView[j * this.laneSize + i]!
-        this.bufferView[j * this.laneSize + i]! ^= this.bufferView[i * this.laneSize + j]!
-        this.bufferView[i * this.laneSize + j]! ^= this.bufferView[j * this.laneSize + i]!
+        bufferView[i * this.laneSize + j]! ^= bufferView[j * this.laneSize + i]!
+        bufferView[j * this.laneSize + i]! ^= bufferView[i * this.laneSize + j]!
+        bufferView[i * this.laneSize + j]! ^= bufferView[j * this.laneSize + i]!
       }
     }
   }
@@ -79,10 +88,10 @@ export class SPD {
   private shuffleLanes() {
     Iterator.from(this)
       .forEach((_, i) =>
-        shuffleBuffer(this.bufferView.subarray(this.laneSize * i, this.laneSize * (i + 1))))
+        shuffleBuffer(this.bufferView().subarray(this.laneSize * i, this.laneSize * (i + 1))))
   }
 
-  private overwriteFewLaneValues() {
+  private overwriteFewValuesInAllLanes() {
     const d = new UniformUint64
 
     Iterator.from(this)
@@ -90,7 +99,7 @@ export class SPD {
         let laneBitSize = 0
         for (let laneSizeMax = this.laneSize - 1; laneSizeMax > 0; laneSizeMax >>= 1, laneBitSize++);
 
-        const lane = this.bufferView.subarray(this.laneSize * i, this.laneSize * (i + 1))
+        const lane = this.bufferView().subarray(this.laneSize * i, this.laneSize * (i + 1))
 
         Array.from({ length: Number(d.newUint([BigInt(this.laneSize / 2), BigInt(this.laneSize)])) }, () =>
           Number(d.newUint([0n, BigInt(this.laneSize - 1)])))

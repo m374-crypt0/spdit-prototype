@@ -64,25 +64,26 @@ describe('SPD test suite', () => {
       })
 
     it.each(['low', 'high'])
-      ('should have each lane with some missing or duplicated values after reverse rotation', (spdType) => {
+      ('should have each lane with some missing or duplicated values after buffer transposition', (spdType) => {
         const spd = new SPD(spdType)
+        const spdBufferCopy = Buffer.from(spd.readonlyBufferView())
 
-        transposeSPDBuffer(spd)
+        transposeBuffer(spdBufferCopy, spd.laneSize)
 
-        const maps: Array<Map<number, number>> = []
-
-        Iterator.from(spd)
-          .forEach(laneIterator => {
-            const m = new Map<number, number>()
-            laneIterator.forEach(k => m.set(k, (m.get(k) ?? 0) + 1))
-            maps.push(m)
+        const maps = new Array(spd.laneSize).fill(null)
+          .map((_, i) =>
+            [...spdBufferCopy.subarray(spd.laneSize * i, spd.laneSize * (i + 1)).values()])
+          .map(lane => {
+            const m = new Map<number, number>
+            lane.forEach(k => m.set(k, (m.get(k) ?? 0) + 1))
+            return m
           })
 
         expect(maps.some(m => m.size < spd.laneSize)).toBeTrue()
       })
 
     it.each(['low', 'high'])
-      ('should verify content properties', (spdType) => {
+      ('should verify content properties for each lane having some missing and duplicated values', (spdType) => {
         const spd = new SPD(spdType)
 
         const n = spd.laneSize - 1
@@ -98,31 +99,15 @@ describe('SPD test suite', () => {
 })
 
 // NOTE: exact same implementation as in SPD class
-function transposeSPDBuffer(spd: SPD) {
-  for (let i = 0; i < spd.laneSize; i++) {
-    for (let j = i; j < spd.laneSize; j++) {
-      if (spd.bufferView[i * spd.laneSize + j] === spd.bufferView[j * spd.laneSize + i])
+function transposeBuffer(buffer: Buffer<ArrayBuffer>, laneSize: number) {
+  for (let i = 0; i < laneSize; i++) {
+    for (let j = i; j < laneSize; j++) {
+      if (buffer[i * laneSize + j] === buffer[j * laneSize + i])
         continue
 
-      spd.bufferView[i * spd.laneSize + j]! ^= spd.bufferView[j * spd.laneSize + i]!
-      spd.bufferView[j * spd.laneSize + i]! ^= spd.bufferView[i * spd.laneSize + j]!
-      spd.bufferView[i * spd.laneSize + j]! ^= spd.bufferView[j * spd.laneSize + i]!
+      buffer[i * laneSize + j]! ^= buffer[j * laneSize + i]!
+      buffer[j * laneSize + i]! ^= buffer[i * laneSize + j]!
+      buffer[i * laneSize + j]! ^= buffer[j * laneSize + i]!
     }
   }
-}
-
-// NOTE: for human vizualization purposes
-function inspectSPDBuffer(spd: SPD) {
-  const m = new Map<number, number>
-
-  Iterator.from(spd)
-    .forEach(it => it
-      .forEach(k =>
-        m.set(k, (m.get(k) ?? 0) + 1)))
-
-  const sortedMap = new Map(m.entries().toArray()
-    .sort((a, b) => a[1] - b[1])
-    .map((e, i) => [`i:${i};c:${e[0]}`, e[1]]))
-
-  console.error(sortedMap)
 }
