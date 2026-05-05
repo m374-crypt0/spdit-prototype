@@ -1,6 +1,17 @@
 import { shuffleBuffer, UniformUint64 } from "src/stochastic"
 
+/**
+ * Stochastic Private Dimensional transcoding table
+ * Core of SPDIT, relying on entropy instead of algorithms
+ */
 export class SPD {
+
+  /**
+   * Construct a new instance of SPD of a specified type
+   * @param type either 'low' or 'high'. A 'low' type SPD is designed for
+   * 'high' type SPD transcoding purposes. A 'high' type SPD is designed to
+   * transcode any data
+   */
   constructor(type: 'low' | 'high') {
     this.laneSize = type === 'low' ? 16 : 256
     this.size = this.laneSize ** 2
@@ -14,20 +25,32 @@ export class SPD {
     this.overwriteFewLaneValues()
   }
 
-  readonly [Symbol.iterator] = () => {
-    const b = this.buffer
-    const ls = this.laneSize
-
-    function* getLanes() {
+  /**
+   * Iterates through all lanes of this SPD instance
+   */
+  readonly [Symbol.iterator] = () =>
+    (function* (b: ArrayBuffer, ls: number) {
       for (let i = 0; i < ls; i++)
         yield Iterator.from(Buffer.from(b)).drop(i * ls).take(ls)
-    }
+    })(this.buffer, this.laneSize)
 
-    return getLanes()
-  }
-
+  /**
+   * The size of each lane of this SPD instance. Depends of SPD type: 'low'
+   * type has a lane size of 16 and 'high' type has a lane size of 256
+   */
   readonly laneSize: number
+
+  /**
+   * The size of this SPD instance storage. Depends on its type. 'low' type SPD
+   * is 256 bytes* 'high' type SPD is 64kb.
+   *
+   * *'low' type SPD size is trivially compressible to 128 bytes
+   */
   readonly size: number
+
+  /**
+   * A view on the underlying storage for this SPD instance.
+   */
   readonly bufferView: Buffer<ArrayBuffer>
 
   private buffer: ArrayBuffer
