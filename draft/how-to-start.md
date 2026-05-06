@@ -60,8 +60,8 @@ I've some ideas I need to test, demonstrate, and make understandable.
 ### Third task: transcoding
 
 - Create a *Transcoder* class having responsibility to:
-  - make *encoding* and *decoding* performant operations (lookup for both)
-  - ~default constructible generating default *high SPD* and *low SPD*~
+  - [x] make *encoding* and *decoding* performant operations (lookup for both)
+  - [x] ~default constructible generating default *high SPD* and *low SPD*~
     - *SPD* are generated on-demand.
     - so far, only a *low SPD* is generated for *decoding* and *encoding* a
       *high SPD* and an *encoding low SPD* for encoding purpose
@@ -72,7 +72,7 @@ I've some ideas I need to test, demonstrate, and make understandable.
   - deterministic *encoding*, needed for *high SPD* exchange feature
     (intuition) and for *seeded hashing*
   - encode and decode any content (need a *high SPD*)
-  - handle a state composed of *high SPD* and *low SPD*, immutable once set
+  - handle a state composed of *high SPD* and *low SPD*, private
 
 ## Seeded hashing
 

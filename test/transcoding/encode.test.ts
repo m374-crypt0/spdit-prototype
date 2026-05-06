@@ -18,7 +18,7 @@ describe('encoding test suite', () => {
 
       const b = xCoder.encodeHighSPD(spd)
 
-      expect(b.byteLength).toBe(2 * spd.size)
+      expect(b.byteLength).toBe(SPD.DIMENSIONAL_FACTOR * spd.size)
     })
 
     it('should output different encoded high SPD each time', () => {

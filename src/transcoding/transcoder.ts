@@ -7,6 +7,13 @@ import { UniformUint64DistributionEngine } from "src/stochastic/distributionEngi
  * high SPD
  */
 export class Transcoder {
+  constructor(options?: Options) {
+    if (options && options.lowSPD && options.lowSPD.laneSize !== SPD.LOW_LANE_SIZE)
+      throw new Error('invalid low SPD specified')
+
+    if (options && options.highSPD && options.highSPD.laneSize !== SPD.HIGH_LANE_SIZE)
+      throw new Error('invalid high SPD specified')
+  }
   /**
    * Specifically encode a SPD of 'high' type using a SPD of 'low' type to do
    * so.
@@ -91,4 +98,9 @@ export class Transcoder {
 
   private lowSPD: SPD | undefined
   private encodingLowSPD: Map<number, number[]> | undefined
+}
+
+type Options = {
+  highSPD?: SPD
+  lowSPD?: SPD
 }
