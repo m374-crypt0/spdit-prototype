@@ -13,6 +13,8 @@ export class Transcoder {
 
     if (options && options.highSPD && options.highSPD.laneSize !== SPD.HIGH_LANE_SIZE)
       throw new Error('invalid high SPD specified')
+
+    this.lowSPD = options?.lowSPD
   }
   /**
    * Specifically encode a SPD of 'high' type using a SPD of 'low' type to do
