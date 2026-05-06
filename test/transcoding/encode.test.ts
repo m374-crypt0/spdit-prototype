@@ -20,6 +20,16 @@ describe('encoding test suite', () => {
 
       expect(b.byteLength).toBe(2 * spd.size)
     })
+
+    it('should output different encoded high SPD each time', () => {
+      const spd = new SPD('high')
+      const xCoder = new Transcoder
+
+      const b1 = xCoder.encodeHighSPD(spd)
+      const b2 = xCoder.encodeHighSPD(spd)
+
+      expect(b1).not.toEqual(b2)
+    })
   })
 })
 

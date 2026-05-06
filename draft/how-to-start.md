@@ -61,8 +61,12 @@ I've some ideas I need to test, demonstrate, and make understandable.
 
 - Create a *Transcoder* class having responsibility to:
   - make *encoding* and *decoding* performant operations (lookup for both)
-  - default constructible generating default *high SPD* and *low SPD*
+  - ~default constructible generating default *high SPD* and *low SPD*~
+    - *SPD* are generated on-demand.
+    - so far, only a *low SPD* is generated for *decoding* and *encoding* a
+      *high SPD* and an *encoding low SPD* for encoding purpose
   - constructible with user-provided *high SPD* and *low SPD*
+    - Observable when several *encoding*s are done on the same data
   - encode and decode *high SPD* (useful for future *high SPD* exchange
     feature, need *low SPD*)
   - deterministic *encoding*, needed for *high SPD* exchange feature

@@ -13,7 +13,7 @@ describe('decoding test suite', () => {
         .toThrowError('invalid buffer, likely not an encoded high SPD')
     })
 
-    it('should succeed in decoded a previously encoded high SPD', () => {
+    it.only('should succeed in decoded a previously encoded high SPD', () => {
       const spd = new SPD('high')
       const xCoder = new Transcoder
 

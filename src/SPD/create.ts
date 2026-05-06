@@ -13,8 +13,8 @@ export class SPD {
    * @param [options=undefined] optional initialization options
    */
   constructor(type: 'low' | 'high', options?: Options) {
-    this.laneSize = type === 'low' ? 16 : 256
-    this.size = this.laneSize ** 2
+    this.laneSize = type === 'low' ? SPD.LOW_LANE_SIZE : SPD.HIGH_LANE_SIZE
+    this.size = type === 'low' ? SPD.LOW_SPD_SIZE : SPD.HIGH_SPD_SIZE
 
     if (options?.buffer)
       this.buffer = options.buffer.buffer
@@ -33,10 +33,10 @@ export class SPD {
    */
   static from(buffer: Readonly<Buffer<ArrayBuffer>>) {
     const { byteLength } = buffer
-    if (byteLength !== 256 && byteLength !== 65_536)
+    if (byteLength !== SPD.LOW_SPD_SIZE && byteLength !== SPD.HIGH_SPD_SIZE)
       throw new Error('invalid buffer size')
 
-    return new SPD(byteLength === 256 ? 'low' : 'high', { buffer })
+    return new SPD(byteLength === this.LOW_SPD_SIZE ? 'low' : 'high', { buffer })
   }
 
   /**
@@ -61,7 +61,7 @@ export class SPD {
    * The size of each lane of this SPD instance. Depends of SPD type: 'low'
    * type has a lane size of 16 and 'high' type has a lane size of 256
    */
-  readonly laneSize: 16 | 256
+  readonly laneSize: typeof SPD.HIGH_LANE_SIZE | typeof SPD.LOW_LANE_SIZE
 
   /**
    * The size of this SPD instance storage. Depends on its type. 'low' type SPD
@@ -70,6 +70,35 @@ export class SPD {
    * *'low' type SPD size is trivially compressible to 128 bytes
    */
   readonly size: number
+
+  /**
+   * The size of one lane (understand line) of a 'low' type SPD
+   */
+  static readonly LOW_LANE_SIZE = 16
+
+  /**
+   * The size of one lane (understand line) of a 'high' type SPD
+   */
+  static readonly HIGH_LANE_SIZE = 256
+
+  /**
+   * The dimensional factor for this transcoding scheme. This prototype support
+   * only 2 for now (dimension-2 transcoding) and it may be sufficient until
+   * the end of times. Increasing this should modify a bunch of algorithms used
+   * here
+   */
+  static readonly DIMENSIONAL_FACTOR = 2
+
+  /**
+   * The size in bytes of the underlying storage for a 'low' type SPD
+   */
+  static readonly LOW_SPD_SIZE = SPD.LOW_LANE_SIZE ** SPD.DIMENSIONAL_FACTOR
+
+  /**
+   * The size in bytes of the underlying storage for a 'high' type SPD
+   */
+  static readonly HIGH_SPD_SIZE = SPD.HIGH_LANE_SIZE ** SPD.DIMENSIONAL_FACTOR
+
 
   private buffer: ArrayBuffer
 

@@ -103,7 +103,7 @@ describe('SPD test suite', () => {
         expect(() => SPD.from(b)).toThrowError('invalid buffer size')
       })
 
-    it.each([{ size: 256, laneSize: 16 }, { size: 65_536, laneSize: 256 }])
+    it.each([{ size: SPD.LOW_SPD_SIZE, laneSize: SPD.LOW_LANE_SIZE }, { size: SPD.HIGH_SPD_SIZE, laneSize: SPD.HIGH_LANE_SIZE }])
       ('should build a SPD instance of a correct type regarding the buffer size', (p) => {
         const b = Buffer.from(new ArrayBuffer(p.size))
         const spd = SPD.from(b)
