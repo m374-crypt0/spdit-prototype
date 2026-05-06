@@ -12,16 +12,29 @@ export class SPD {
    * 'high' type SPD transcoding purposes. A 'high' type SPD is designed to
    * transcode any data
    */
-  constructor(type: 'low' | 'high') {
+  constructor(type: 'low' | 'high', options?: { buffer?: Readonly<Buffer<ArrayBuffer>> }) {
     this.laneSize = type === 'low' ? 16 : 256
     this.size = this.laneSize ** 2
-    this.buffer = new ArrayBuffer(this.size, { maxByteLength: this.size })
 
-    this.generateLanes()
-    this.shuffleLanes()
-    this.transposeBuffer()
-    this.shuffleLanes()
-    this.overwriteFewValuesInAllLanes()
+    if (options?.buffer)
+      this.buffer = options.buffer.buffer
+    else {
+      this.buffer = new ArrayBuffer(this.size, { maxByteLength: this.size })
+
+      this.generateLanes()
+      this.shuffleLanes()
+      this.transposeBuffer()
+      this.shuffleLanes()
+      this.overwriteFewValuesInAllLanes()
+    }
+  }
+
+  static from(buffer: Readonly<Buffer<ArrayBuffer>>) {
+    const { byteLength } = buffer
+    if (byteLength !== 256 && byteLength !== 65_536)
+      throw new Error('invalid buffer size')
+
+    return new SPD(byteLength === 256 ? 'low' : 'high', { buffer })
   }
 
   /**

@@ -1,6 +1,6 @@
 import { SPD } from "src/SPD";
 
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, xit } from "bun:test";
 
 describe('SPD test suite', () => {
   describe('creation', () => {
@@ -94,6 +94,21 @@ describe('SPD test suite', () => {
           .reduce((acc, cur) => acc + cur, 0)
 
         expect(notExpectedSum).not.toBe(sum)
+      })
+
+    it.each([16, 255, 3000, 60_000, 120_000])
+      ('should not be possible to create an SPD instance with incorrect sized buffer', (size) => {
+        const b = Buffer.from(new ArrayBuffer(size))
+
+        expect(() => SPD.from(b)).toThrowError('invalid buffer size')
+      })
+
+    it.each([{ size: 256, laneSize: 16 }, { size: 65_536, laneSize: 256 }])
+      ('should build a SPD instance of a correct type regarding the buffer size', (p) => {
+        const b = Buffer.from(new ArrayBuffer(p.size))
+        const spd = SPD.from(b)
+
+        expect(spd.laneSize).toBe(p.laneSize)
       })
   })
 })
