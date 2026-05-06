@@ -1,4 +1,5 @@
 import { SPD } from "src/SPD";
+import { SplitMix64, Xoroshiro128Plus } from "src/stochastic";
 import { UniformUint64DistributionEngine } from "src/stochastic/distributionEngines";
 
 /**
@@ -7,7 +8,7 @@ import { UniformUint64DistributionEngine } from "src/stochastic/distributionEngi
  * high SPD
  */
 export class Transcoder {
-  constructor(options?: Options) {
+  constructor(options?: ConstructorOptions) {
     if (options && options.lowSPD && options.lowSPD.laneSize !== SPD.LOW_LANE_SIZE)
       throw new Error('invalid low SPD specified')
 
@@ -20,16 +21,17 @@ export class Transcoder {
    * Specifically encode a SPD of 'high' type using a SPD of 'low' type to do
    * so.
    * @param highSPD a 'high' type SPD. Passing a 'low' type SPD throws
+   * @param options various options to modify the default behavior of this function
    * @throws Error if the spd parameter is not of 'high' type
    * @returns A buffer view on the encoded high SPD
    */
-  encodeHighSPD(highSPD: SPD) {
+  encodeHighSPD(highSPD: SPD, options?: EncodeHighSPDOptions) {
     if (highSPD.laneSize !== SPD.HIGH_LANE_SIZE)
       throw new Error('only high SPD can be encoded')
 
     const map = this.initAndGetLowSPDForEncoding()
     const buffer = Buffer.from(new ArrayBuffer(highSPD.size * SPD.DIMENSIONAL_FACTOR, { maxByteLength: highSPD.size * SPD.DIMENSIONAL_FACTOR }))
-    const d = new UniformUint64DistributionEngine
+    const d = new UniformUint64DistributionEngine(new Xoroshiro128Plus(new SplitMix64(options?.seed)))
 
     highSPD.readonlyBufferView()
       .forEach((byte, index) => {
@@ -102,7 +104,17 @@ export class Transcoder {
   private encodingLowSPD: Map<number, number[]> | undefined
 }
 
-type Options = {
+type EncodeHighSPDOptions = {
+  /**
+   * If defined, this seed will be used to make the random selection of address
+   * deterministic. Using the same seed for more than one encoding has
+   * catastrophic effects on the encoding security as it exposes repetitions in
+   * chosen addresses for the encoded data.
+   */
+  seed?: bigint
+}
+
+type ConstructorOptions = {
   highSPD?: SPD
   lowSPD?: SPD
 }

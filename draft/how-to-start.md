@@ -72,7 +72,7 @@ I've some ideas I need to test, demonstrate, and make understandable.
     - Observable when several *encoding*s are done on the same data
   - [x] encode and decode *high SPD* (useful for future *high SPD* exchange
     feature, need *low SPD*)
-  - [ ] deterministic *encoding*, needed for *high SPD* exchange feature
+  - [x] deterministic *encoding*, needed for *high SPD* exchange feature
     (intuition) and for *seeded hashing*
   - [ ] encode and decode any content (need a *high SPD*)
 
