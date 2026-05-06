@@ -1,9 +1,7 @@
-import { SPD } from "src/SPD";
+import type { SPD } from "src/SPD";
 
 export class Transcoder {
-  constructor() {
-    this.highSPD = new SPD('high')
+  encodeHighSPD(spd: SPD) {
+    throw new Error('only high SPD can be encoded')
   }
-
-  readonly highSPD: SPD
 }

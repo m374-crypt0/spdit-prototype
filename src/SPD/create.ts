@@ -39,7 +39,7 @@ export class SPD {
    * @returns a readonly buffer view on underlying buffer storage
    */
   readonlyBufferView(): Readonly<Buffer<ArrayBuffer>> {
-    return Buffer.from(this.buffer)
+    return this.bufferView()
   }
 
   /**
