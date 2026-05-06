@@ -9,6 +9,15 @@
 - **decoding** is a *transcoding* operation. It consists simply in transforming
   an *address* from a *SPD* to a *value*. Put it simply, it is a *decipher*ing
   operation.
+- **dimensional** is a proto-concept of *SPDIT*. It is of course prevalent, the
+  transcoding scheme is clearly bi-dimensional here (at least, we can build a
+  mental model relying on it). In this *SPDIT* prototype, *SPDIT* only use a
+  bi-dimensional approach for all *transcoding* endeavors. It should be
+  sufficient until the end of time actually due to the *information theoretically
+  secured* characteristics of *SPDIT*. However, one should find increasing the
+  dimensionality a not impossible task to further enhance the security of *SPDIT*
+  beyond all reason. Keep in mind, however, that increasing dimensionality
+  would cause larger *SPD* size and encoded data.
 - **encoding** is a *transcoding* operation. It consists in transforming a
   *value* to an *address* *stochastic*ally chosen in a *SPD*. Put it simply, it
   is a *cipher*ing operation.
