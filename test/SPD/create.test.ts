@@ -1,6 +1,6 @@
 import { SPD } from "src/SPD";
 
-import { describe, expect, it, xit } from "bun:test";
+import { describe, expect, it } from "bun:test";
 
 describe('SPD test suite', () => {
   describe('creation', () => {

@@ -1,36 +1,51 @@
 import { SPD } from "src/SPD";
 
+/**
+ * A transcoder has both encoding and decoding in charge.
+ * It can either transcode arbitrary data or be more specific and transcode
+ * high SPD
+ */
 export class Transcoder {
+  /**
+   * Specifically encode a SPD of 'high' type using a SPD of 'low' type to do
+   * so.
+   * @param spd a 'high' type SPD. Passing a 'low' type SPD throws
+   * @throws Error if the spd parameter is not of 'high' type
+   * @returns A buffer view on the encoded high SPD
+   */
   encodeHighSPD(spd: SPD) {
     if (spd.laneSize !== 256)
       throw new Error('only high SPD can be encoded')
 
-    this.setupLowSPDForEncoding()
-
-    const b = Buffer.from(new ArrayBuffer(spd.size * 2, { maxByteLength: spd.size * 2 }))
-    const m = this.encodingLowSPD!
+    const map = this.initAndGetLowSPDForEncoding()
+    const buffer = Buffer.from(new ArrayBuffer(spd.size * 2, { maxByteLength: spd.size * 2 }))
 
     spd.readonlyBufferView()
       .forEach((byte, index) => {
         const lowNibble = byte & 0x0f
         const highNibble = (byte & 0xf0) >> 4
-
         const i = index * 2
 
-        b[i] = m.get(lowNibble)![0]!
-        b[i + 1] = m.get(highNibble)![0]!
+        buffer[i] = map.get(lowNibble)![0]!
+        buffer[i + 1] = map.get(highNibble)![0]!
       })
 
-    return b
+    return buffer
   }
 
+  /**
+   * Decodes a well-sized buffer to a 'high' type SPD.
+   * @param buffer the supposed encoded SPD. Only the buffer byteLength is
+   * check for validity
+   * @throws Error if the buffer size does not match with an encoded 'high'
+   * type SPD
+   * @returns a 'high' type SPD
+   */
   decodeToHighSPD(buffer: Readonly<Buffer<ArrayBuffer>>) {
     if (buffer.byteLength !== 256 * 256 * 2)
       throw new Error('invalid buffer, likely not an encoded high SPD')
 
-    this.setupLowSPDForDecoding()
-    const l = this.lowSPD!.readonlyBufferView()
-
+    const l = this.initAndGetLowSPDForDecoding().readonlyBufferView()
     const b = Buffer.from(new ArrayBuffer(256 * 256))
 
     b.forEach((_, index) => {
@@ -49,29 +64,23 @@ export class Transcoder {
     return SPD.from(b)
   }
 
-  private setupLowSPDForDecoding() {
-    if (this.encodingLowSPD)
-      return
-
-    this.lowSPD = this.lowSPD ?? new SPD('low')
+  private initAndGetLowSPDForDecoding() {
+    return this.lowSPD = this.lowSPD ?? new SPD('low')
   }
 
-  private setupLowSPDForEncoding() {
-    this.setupLowSPDForDecoding()
-
+  private initAndGetLowSPDForEncoding() {
     if (this.encodingLowSPD)
-      return
+      return this.encodingLowSPD
 
-    this.encodingLowSPD = new Map<number, number[]>
+    const lowSPD = this.initAndGetLowSPDForDecoding()
 
-    const m = this.encodingLowSPD
+    const map = this.encodingLowSPD = new Map<number, number[]>
 
-    this.lowSPD!.readonlyBufferView()
-      .forEach((nibble, i) => {
-        const a = m.get(nibble) ?? []
-        a.push(i)
-        m.set(nibble, a)
-      })
+    lowSPD.readonlyBufferView()
+      .forEach((nibble, i) =>
+        map.set(nibble, [...map.get(nibble) ?? [], i]))
+
+    return map
   }
 
   private lowSPD: SPD | undefined

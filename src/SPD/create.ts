@@ -5,14 +5,14 @@ import { shuffleBuffer, UniformUint64 } from "src/stochastic"
  * Core of SPDIT, relying on entropy instead of algorithms
  */
 export class SPD {
-
   /**
    * Construct a new instance of SPD of a specified type
    * @param type either 'low' or 'high'. A 'low' type SPD is designed for
    * 'high' type SPD transcoding purposes. A 'high' type SPD is designed to
    * transcode any data
+   * @param [options=undefined] optional initialization options
    */
-  constructor(type: 'low' | 'high', options?: { buffer?: Readonly<Buffer<ArrayBuffer>> }) {
+  constructor(type: 'low' | 'high', options?: Options) {
     this.laneSize = type === 'low' ? 16 : 256
     this.size = this.laneSize ** 2
 
@@ -20,15 +20,17 @@ export class SPD {
       this.buffer = options.buffer.buffer
     else {
       this.buffer = new ArrayBuffer(this.size, { maxByteLength: this.size })
-
-      this.generateLanes()
-      this.shuffleLanes()
-      this.transposeBuffer()
-      this.shuffleLanes()
-      this.overwriteFewValuesInAllLanes()
+      this.initializeBuffer()
     }
   }
 
+  /**
+   * Creates a new SPD instance from an existing buffer supposed to be a valid
+   * underlying storage for either a 'low' or 'high' SPD
+   * @param buffer a buffer supposed to be the underlying storage for the new
+   * SPD instance. Only its byteLength is checked.
+   * @returns a SPD instance
+   */
   static from(buffer: Readonly<Buffer<ArrayBuffer>>) {
     const { byteLength } = buffer
     if (byteLength !== 256 && byteLength !== 65_536)
@@ -70,6 +72,14 @@ export class SPD {
   readonly size: number
 
   private buffer: ArrayBuffer
+
+  private initializeBuffer() {
+    this.generateLanes()
+    this.shuffleLanes()
+    this.transposeBuffer()
+    this.shuffleLanes()
+    this.overwriteFewValuesInAllLanes()
+  }
 
   private bufferView() {
     return Buffer.from(this.buffer)
@@ -122,6 +132,15 @@ export class SPD {
             lane[j] = lane[v]!
           })
       })
-
   }
+}
+
+type Options = {
+  /**
+   * A buffer to initialize a SPD instance with.
+   * Note that there are no check done on the buffer content. Only its
+   * byteLength is checked to ensure it will fit either on a 'low' or 'high'
+   * SPD
+   */
+  buffer?: Readonly<Buffer<ArrayBuffer>>
 }
