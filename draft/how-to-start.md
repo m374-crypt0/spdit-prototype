@@ -59,20 +59,30 @@ I've some ideas I need to test, demonstrate, and make understandable.
 
 ### Third task: transcoding
 
-- Create a *Transcoder* class having responsibility to:
+- [ ] Create a *Transcoder* class having responsibility to:
   - [x] make *encoding* and *decoding* performant operations (lookup for both)
+  - handle a state composed of *high SPD* and *low SPD*, private
+    - [x] *low SPD* is managed, both in its encoding and decoding form
+    - [ ] *high SPD* is yet to be done for arbitrary data *transcoding*
   - [x] ~default constructible generating default *high SPD* and *low SPD*~
     - *SPD* are generated on-demand.
     - so far, only a *low SPD* is generated for *decoding* and *encoding* a
       *high SPD* and an *encoding low SPD* for encoding purpose
-  - constructible with user-provided *high SPD* and *low SPD*
+  - [x] constructible with user-provided *high SPD* and *low SPD*
     - Observable when several *encoding*s are done on the same data
-  - encode and decode *high SPD* (useful for future *high SPD* exchange
+  - [x] encode and decode *high SPD* (useful for future *high SPD* exchange
     feature, need *low SPD*)
-  - deterministic *encoding*, needed for *high SPD* exchange feature
+  - [ ] deterministic *encoding*, needed for *high SPD* exchange feature
     (intuition) and for *seeded hashing*
-  - encode and decode any content (need a *high SPD*)
-  - handle a state composed of *high SPD* and *low SPD*, private
+  - [ ] encode and decode any content (need a *high SPD*)
+
+### Fourth task: design the exchange protocol
+
+- Leverage *SPD* and *Transcoder* classes capabilities to achieve exchange
+- model parties who want to exchange
+  - I think *Transcoder* is a good start, they each manage a *low SPD*
+- Start with an easy case: each party share the same *low SPD*
+- Then, generalize for any *low SPD*
 
 ## Seeded hashing
 
