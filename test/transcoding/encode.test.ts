@@ -11,6 +11,15 @@ describe('encoding test suite', () => {
 
       expect(() => xCoder.encodeHighSPD(spd)).toThrowError('only high SPD can be encoded')
     })
+
+    it('should encode a high SPD giving a buffer that is different and 2 time bigger than the spd itself', () => {
+      const spd = new SPD('high')
+      const xCoder = new Transcoder
+
+      const b = xCoder.encodeHighSPD(spd)
+
+      expect(b.byteLength).toBe(2 * spd.size)
+    })
   })
 })
 

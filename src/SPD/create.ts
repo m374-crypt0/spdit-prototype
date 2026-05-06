@@ -46,7 +46,7 @@ export class SPD {
    * The size of each lane of this SPD instance. Depends of SPD type: 'low'
    * type has a lane size of 16 and 'high' type has a lane size of 256
    */
-  readonly laneSize: number
+  readonly laneSize: 16 | 256
 
   /**
    * The size of this SPD instance storage. Depends on its type. 'low' type SPD
