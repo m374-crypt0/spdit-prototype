@@ -1,4 +1,5 @@
 import { Transcoder } from "src/transcoding"
+import { SPD } from "./create"
 
 export class Party {
   constructor(identifier: string, transcoder?: Transcoder) {
@@ -16,11 +17,25 @@ export class Exchange {
 
     if (initiator.identifier === recipient.identifier)
       throw new Error('invalid exchange configuration, initialtor must be different from recipient')
+
+    this.state_ = 'not_started'
   }
 
   state(): State {
-    return 'not_started'
+    return this.state_
   }
+
+  initiate(seed: bigint, entropy: SPD) {
+    if (entropy.laneSize === SPD.LOW_LANE_SIZE)
+      throw new Error('insufficient entropy, only \'high\' type SPD are supported')
+
+    if (this.state_ !== 'not_started')
+      throw new Error('invalid initiate call, exchange has already been initiated')
+
+    this.state_ = 'initiating'
+  }
+
+  private state_: State
 }
 
 type Options = {
@@ -28,4 +43,4 @@ type Options = {
   recipient: Party
 }
 
-type State = 'not_started'
+type State = 'not_started' | 'initiating'
