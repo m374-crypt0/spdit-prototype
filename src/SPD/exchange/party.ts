@@ -15,7 +15,9 @@ export class Party {
     }
   }
 
-  initiateExchange() { }
+  initiateExchange(seed: bigint, encodedEntropySource: Readonly<Buffer<ArrayBuffer>>): InitiateExchangeResult {
+    return { encodedPayload: Buffer.from(new ArrayBuffer(2 * 1 << 16)) }
+  }
 
   readonly identifier: string
   readonly transcoder: Transcoder
@@ -24,4 +26,8 @@ export class Party {
 type InitiateExchangeData = {
   seed: bigint,
   encodedEntropySource: Readonly<Buffer<ArrayBuffer>>
+}
+
+type InitiateExchangeResult = {
+  encodedPayload: Readonly<Buffer<ArrayBuffer>>
 }

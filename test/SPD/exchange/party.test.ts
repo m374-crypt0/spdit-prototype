@@ -1,4 +1,4 @@
-import { Party } from "src/SPD";
+import { Party, SPD } from "src/SPD";
 import { Transcoder } from "src/transcoding";
 
 import { describe, expect, it } from "bun:test";
@@ -21,6 +21,16 @@ describe('SPD test suite', () => {
 
         expect(seed & ((1n << 64n) - 1n)).toBe(seed)
         expect(encodedEntropySource.byteLength).toBe(1 << 16)
+      })
+
+      it('should produce well formed encoded payload', () => {
+        const initiator = new Party('initiator')
+        const recipient = new Party('recipient')
+
+        const { seed, encodedEntropySource } = initiator.computeInitiateExchangeData()
+        const { encodedPayload } = recipient.initiateExchange(seed, encodedEntropySource)
+
+        expect(encodedPayload.byteLength).toBe(SPD.DIMENSIONAL_FACTOR * SPD.HIGH_SPD_SIZE)
       })
     })
   })

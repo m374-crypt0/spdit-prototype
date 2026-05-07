@@ -21,9 +21,8 @@ export class Exchanger {
     if (this.state_ !== 'not_started')
       throw new Error('invalid initiate call')
 
-    this.initiator.computeInitiateExchangeData()
-    this.recipient.initiateExchange()
-
+    const { encodedEntropySource, seed } = this.initiator.computeInitiateExchangeData()
+    this.recipient.initiateExchange(seed, encodedEntropySource)
 
     this.state_ = 'initiating'
   }
