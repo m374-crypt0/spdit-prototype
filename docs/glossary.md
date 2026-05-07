@@ -55,7 +55,8 @@
 - **shi7** aka *seeded stochastic hashing by information transcoding* is the
   *SPDIT* implementation of a *hashing* function. It is an open research field
   and need to be implemented and evaluated regarding existing *hashing* function
-  properties and *quantum algorithm* resistance.
+  properties and *quantum algorithm* resistance such as the *Grover's
+  algorithm*
 - **Shor's Algorithm** is a *quantum algorithm* that is potentially able to
   resolve the factoring problem, the discrete logarithm problem and the period
   finding problem. Given a **sufficiently stable and powerful** quantum
