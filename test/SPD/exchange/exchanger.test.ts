@@ -33,11 +33,13 @@ describe('SPD test suite', () => {
           })
 
           it('should initiate exchange between initiator and recipient then transition to initiating', async () => {
-            const initiateExchangeWith = spyOn(initiator, 'initiateExchangeWith')
+            const computeInitiateExchangeData = spyOn(initiator, 'computeInitiateExchangeData')
+            const initiateExchange = spyOn(recipient, 'initiateExchange')
 
             await exchange.initiate()
 
-            expect(initiateExchangeWith).toHaveBeenCalledTimes(1)
+            expect(computeInitiateExchangeData).toHaveBeenCalledTimes(1)
+            expect(initiateExchange).toHaveBeenCalledTimes(1)
             expect(exchange.state()).toBe('initiating')
           })
 
