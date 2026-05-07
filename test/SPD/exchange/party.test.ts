@@ -13,6 +13,15 @@ describe('SPD test suite', () => {
         expect(alice.transcoder).not.toBeUndefined()
         expect(bob.transcoder).not.toBeUndefined()
       })
+
+      it('should produce well formed exchange data', () => {
+        const initiator = new Party('initiator')
+
+        const { seed, encodedEntropySource } = initiator.computeInitiateExchangeData()
+
+        expect(seed & ((1n << 64n) - 1n)).toBe(seed)
+        expect(encodedEntropySource.byteLength).toBe(1 << 16)
+      })
     })
   })
 })
