@@ -1,5 +1,4 @@
 import { SPD } from "./create";
+import { Exchange, Party } from "./exchange";
 
-export {
-  SPD
-};
+export { Exchange, Party, SPD };
