@@ -12,7 +12,14 @@ export class Party {
 
 export class Exchange {
   constructor(options: Options) {
-    throw new Error('invalid exchange configuration, initialtor must be different from recipient')
+    const { initiator, recipient } = options
+
+    if (initiator.identifier === recipient.identifier)
+      throw new Error('invalid exchange configuration, initialtor must be different from recipient')
+  }
+
+  state(): State {
+    return 'not_started'
   }
 }
 
@@ -20,3 +27,5 @@ type Options = {
   initiator: Party,
   recipient: Party
 }
+
+type State = 'not_started'

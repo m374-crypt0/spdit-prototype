@@ -7,10 +7,20 @@ describe('SPD test suite', () => {
   describe('exchange', () => {
     it('should throw at initializing an exchange between an intiator and himself', () => {
       const initiator = new Party('alice')
-      const recipient = new Party('alice')
+      const recipient = new Party('bob')
 
-      expect(() => new Exchange({ initiator, recipient }))
+      expect(() => new Exchange({ initiator, recipient: initiator }))
         .toThrowError('invalid exchange configuration, initialtor must be different from recipient')
+
+      expect(() => new Exchange({ initiator, recipient })).not.toThrow()
+    })
+
+    it('should report the state of an exchange as not_started when instantiated', () => {
+      const initiator = new Party('alice')
+      const recipient = new Party('bob')
+      const exchange = new Exchange({ initiator, recipient })
+
+      expect(exchange.state()).toBe('not_started')
     })
   })
 
