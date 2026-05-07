@@ -17,11 +17,11 @@ export class Exchanger {
     return this.state_
   }
 
-  initiate() {
+  async initiate() {
     if (this.state_ !== 'not_started')
       throw new Error('invalid initiate call')
 
-    this.initiator.initiateExchangeWith(this.recipient)
+    await this.initiator.initiateExchangeWith(this.recipient)
 
     this.state_ = 'initiating'
   }

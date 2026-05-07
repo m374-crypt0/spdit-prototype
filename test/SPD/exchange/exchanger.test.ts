@@ -32,19 +32,19 @@ describe('SPD test suite', () => {
             expect(exchange.state()).toBe('not_started')
           })
 
-          it('should initiate exchange between initiator and recipient then transition to initiating', () => {
+          it('should initiate exchange between initiator and recipient then transition to initiating', async () => {
             const initiateExchangeWith = spyOn(initiator, 'initiateExchangeWith')
 
-            exchange.initiate()
+            await exchange.initiate()
 
             expect(initiateExchangeWith).toHaveBeenCalledTimes(1)
             expect(exchange.state()).toBe('initiating')
           })
 
-          it('should throw if initiate is called while state is already initiating', () => {
-            exchange.initiate()
+          it('should throw if initiate is called while state is already initiating', async () => {
+            await exchange.initiate()
 
-            expect(() => exchange.initiate())
+            expect(async () => await exchange.initiate())
               .toThrowError('invalid initiate call')
           })
         })
@@ -52,9 +52,9 @@ describe('SPD test suite', () => {
         describe('from initiating', () => {
           let exchange: Exchanger
 
-          beforeEach(() => {
+          beforeEach(async () => {
             exchange = new Exchanger({ initiator, recipient })
-            exchange.initiate()
+            await exchange.initiate()
           })
 
           it('should eventually transition from initiating to initiated, updating the initiator state', () => {

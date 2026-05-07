@@ -6,7 +6,7 @@ export class Party {
     this.transcoder = transcoder ?? new Transcoder
   }
 
-  initiateExchangeWith(recipient: Party) { }
+  async initiateExchangeWith(recipient: Party) { }
 
   readonly identifier: string
   readonly transcoder: Transcoder

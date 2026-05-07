@@ -10,8 +10,8 @@ describe('SPD test suite', () => {
         const alice = new Party('alice', new Transcoder)
         const bob = new Party('bob')
 
-        expect(alice).toHaveProperty('transcoder')
-        expect(bob).toHaveProperty('transcoder')
+        expect(alice.transcoder).not.toBeUndefined()
+        expect(bob.transcoder).not.toBeUndefined()
       })
     })
   })
