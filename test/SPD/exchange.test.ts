@@ -16,43 +16,46 @@ describe('SPD test suite', () => {
     })
 
     describe('exchange flow', () => {
-      const initiator = new Party('alice')
-      const recipient = new Party('bob')
+      describe('initiator and recipient share the same low SPD', () => {
+        const lowSPD = new SPD('low')
+        const initiator = new Party('alice', new Transcoder({ lowSPD }))
+        const recipient = new Party('bob', new Transcoder({ lowSPD }))
 
-      it('should report the state of an exchange as not_started when instantiated', () => {
-        const exchange = new Exchange({ initiator, recipient })
+        it('should report the state of an exchange as not_started when instantiated', () => {
+          const exchange = new Exchange({ initiator, recipient })
 
-        expect(exchange.state()).toBe('not_started')
-      })
+          expect(exchange.state()).toBe('not_started')
+        })
 
-      it('should refuse to transition to initiating with wrong entropy source', () => {
-        const seed = 42n
-        const entropy = new SPD('low')
-        const exchange = new Exchange({ initiator, recipient })
+        it('should refuse to transition to initiating with wrong entropy source', () => {
+          const seed = 42n
+          const entropy = new SPD('low')
+          const exchange = new Exchange({ initiator, recipient })
 
-        expect(() => exchange.initiate(seed, entropy))
-          .toThrowError('insufficient entropy, only \'high\' type SPD are supported')
-      })
+          expect(() => exchange.initiate(seed, entropy))
+            .toThrowError('insufficient entropy, only \'high\' type SPD are supported')
+        })
 
-      it('should transition from not_started to initiating', () => {
-        const seed = 42n
-        const entropy = new SPD('high')
-        const exchange = new Exchange({ initiator, recipient })
+        it('should transition from not_started to initiating', () => {
+          const seed = 42n
+          const entropy = new SPD('high')
+          const exchange = new Exchange({ initiator, recipient })
 
-        exchange.initiate(seed, entropy)
+          exchange.initiate(seed, entropy)
 
-        expect(exchange.state()).toBe('initiating')
-      })
+          expect(exchange.state()).toBe('initiating')
+        })
 
-      it('should throw if initiate is called while state is already initiating', () => {
-        const seed = 42n
-        const entropy = new SPD('high')
-        const exchange = new Exchange({ initiator, recipient })
+        it('should throw if initiate is called while state is already initiating', () => {
+          const seed = 42n
+          const entropy = new SPD('high')
+          const exchange = new Exchange({ initiator, recipient })
 
-        exchange.initiate(seed, entropy)
+          exchange.initiate(seed, entropy)
 
-        expect(() => exchange.initiate(seed + 1n, entropy))
-          .toThrowError('invalid initiate call, exchange has already been initiated')
+          expect(() => exchange.initiate(seed + 1n, entropy))
+            .toThrowError('invalid initiate call, exchange has already been initiated')
+        })
       })
     })
   })
