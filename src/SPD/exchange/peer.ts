@@ -2,26 +2,26 @@ import { SplitMix64 } from "src/stochastic"
 import { Transcoder } from "src/transcoding"
 import { SPD } from "../create"
 
-export class Party {
+export class Peer {
   constructor(identifier: string, transcoder?: Transcoder) {
     this.identifier = identifier
     this.transcoder = transcoder ?? new Transcoder
   }
 
-  computeInitiateExchangeData(): InitiateExchangeData {
+  generateInitiateExchangeData(): InitiateExchangeData {
     return {
       seed: new SplitMix64().state(),
       encodedEntropySource: new SPD('high').readonlyBufferView()
     }
   }
 
-  initiateExchange(seed: bigint, encodedEntropySource: Readonly<Buffer<ArrayBuffer>>): InitiateExchangeResult {
+  generateEncodedPayload(seed: bigint, encodedEntropySource: Readonly<Buffer<ArrayBuffer>>): InitiateExchangeResult {
     return { encodedPayload: Buffer.from(new ArrayBuffer(2 * 1 << 16)) }
   }
 
-  computeLowSPDFromEncodedPayload() { }
+  reconstructLowSPD() { }
 
-  finalizeExchange() { }
+  generateFinalizeExchangeData() { }
 
   readonly identifier: string
   readonly transcoder: Transcoder

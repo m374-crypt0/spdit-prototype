@@ -1,5 +1,4 @@
-import { resolve } from "bun"
-import type { Party } from "./"
+import type { Peer } from "./"
 
 export class Exchanger {
   constructor(options: Options) {
@@ -28,8 +27,8 @@ export class Exchanger {
       // NOTE: Forces to wait the next turn of the event loop to simulate an
       // eventual settle of this promise
       setImmediate(() => {
-        const { encodedEntropySource, seed } = this.initiator.computeInitiateExchangeData()
-        this.recipient.initiateExchange(seed, encodedEntropySource)
+        const { encodedEntropySource, seed } = this.initiator.generateInitiateExchangeData()
+        this.recipient.generateEncodedPayload(seed, encodedEntropySource)
         this.state_ = 'initiated'
         resolve()
       })
@@ -46,7 +45,7 @@ export class Exchanger {
       // NOTE: Forces to wait the next turn of the event loop to simulate an
       // eventual settle of this promise
       setImmediate(() => {
-        this.initiator.computeLowSPDFromEncodedPayload()
+        this.initiator.reconstructLowSPD()
         this.state_ = 'ready'
 
         resolve()
@@ -62,7 +61,7 @@ export class Exchanger {
 
     return new Promise<void>(resolve => {
       setImmediate(() => {
-        this.recipient.finalizeExchange()
+        this.recipient.generateFinalizeExchangeData()
         this.state_ = 'finalized'
 
         resolve()
@@ -71,13 +70,13 @@ export class Exchanger {
   }
 
   private state_: State
-  private initiator: Party
-  private recipient: Party
+  private initiator: Peer
+  private recipient: Peer
 }
 
 type Options = {
-  initiator: Party,
-  recipient: Party
+  initiator: Peer,
+  recipient: Peer
 }
 
 type State = 'not_started' | 'initiating' | 'initiated' | 'computing' | 'ready' | 'finalizing' | 'finalized'

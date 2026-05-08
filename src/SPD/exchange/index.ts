@@ -1,4 +1,4 @@
 import { Exchanger } from './exchanger'
-import { Party } from './party'
+import { Peer } from './peer'
 
-export { Exchanger, Party }
+export { Exchanger, Peer }

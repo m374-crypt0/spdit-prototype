@@ -1,4 +1,4 @@
-import { Exchanger, Party, SPD } from "src/SPD";
+import { Exchanger, Peer, SPD } from "src/SPD";
 import { Transcoder } from "src/transcoding";
 
 import { beforeEach, describe, expect, it, spyOn } from "bun:test";
@@ -7,15 +7,15 @@ describe('SPD test suite', () => {
   describe('exchange test suite', () => {
     describe('exchanger instantiation', () => {
       it('should throw at initializing an exchange between an intiator and himself', () => {
-        const initiator = new Party('alice')
+        const initiator = new Peer('alice')
 
         expect(() => new Exchanger({ initiator, recipient: initiator }))
           .toThrowError('invalid exchange configuration, initiator must be different from recipient')
       })
 
       it('should report the state of an exchange as not_started when instantiated', () => {
-        const initiator = new Party('alice')
-        const recipient = new Party('bob')
+        const initiator = new Peer('alice')
+        const recipient = new Peer('bob')
         expect(new Exchanger({ initiator, recipient }).state()).toBe('not_started')
       })
     })
@@ -23,8 +23,8 @@ describe('SPD test suite', () => {
     describe('exchange flow', () => {
       describe('initiator and recipient share the same low SPD', () => {
         const lowSPD = new SPD('low')
-        const initiator = new Party('alice', new Transcoder({ lowSPD }))
-        const recipient = new Party('bob', new Transcoder({ lowSPD }))
+        const initiator = new Peer('alice', new Transcoder({ lowSPD }))
+        const recipient = new Peer('bob', new Transcoder({ lowSPD }))
 
         describe('from not_started', () => {
           let exchanger: Exchanger
@@ -55,13 +55,13 @@ describe('SPD test suite', () => {
           })
 
           it('should eventually transition from initiating to initiated', async () => {
-            const computeInitiateExchangeData = spyOn(initiator, 'computeInitiateExchangeData')
-            const initiateExchange = spyOn(recipient, 'initiateExchange')
+            const generateInitiateExchangeData = spyOn(initiator, 'generateInitiateExchangeData')
+            const generateEncodedPayload = spyOn(recipient, 'generateEncodedPayload')
 
             await initiating
 
-            expect(computeInitiateExchangeData).toHaveBeenCalled()
-            expect(initiateExchange).toHaveBeenCalled()
+            expect(generateInitiateExchangeData).toHaveBeenCalled()
+            expect(generateEncodedPayload).toHaveBeenCalled()
 
             expect(exchanger.state()).toBe('initiated')
           })
@@ -107,11 +107,11 @@ describe('SPD test suite', () => {
           })
 
           it('should eventually transition from computing to ready', async () => {
-            const computeLowSPDFromEncodedPayload = spyOn(initiator, 'computeLowSPDFromEncodedPayload')
+            const reconstructLowSPD = spyOn(initiator, 'reconstructLowSPD')
 
             await computing
 
-            expect(computeLowSPDFromEncodedPayload).toHaveBeenCalled()
+            expect(reconstructLowSPD).toHaveBeenCalled()
             expect(exchanger.state()).toBe('ready')
           })
         })
@@ -158,11 +158,11 @@ describe('SPD test suite', () => {
           })
 
           it('should eventually transition from computing to ready', async () => {
-            const finalizeExchange = spyOn(recipient, 'finalizeExchange')
+            const generateFinalizeExchangeData = spyOn(recipient, 'generateFinalizeExchangeData')
 
             await finalizing
 
-            expect(finalizeExchange).toHaveBeenCalled()
+            expect(generateFinalizeExchangeData).toHaveBeenCalled()
             expect(exchanger.state()).toBe('finalized')
           })
         })
