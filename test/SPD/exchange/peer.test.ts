@@ -26,6 +26,15 @@ describe('SPD test suite', () => {
         expect(encodedHighSPD).toEqual(encodedEntropySource)
       })
 
+      it('is not possible to generate initiate exchange data twice', () => {
+        const initiator = new Peer('initiator')
+
+        initiator.generateInitiateExchangeData()
+
+        expect(() => initiator.generateInitiateExchangeData())
+          .toThrowError('invalid generateInitiateExchangeData call')
+      })
+
       it('should generate well formed encoded payload from the initiate exchange data', () => {
         // NOTE: sharing lowSPD ensure the algorithm is correct. Real world use
         // case will show initiator and recipient with very different low SPD
@@ -37,6 +46,18 @@ describe('SPD test suite', () => {
         const { encodedPayload } = recipient.generateEncodedPayload(seed, encodedEntropySource)
 
         expect(encodedPayload).toEqual(encodedEntropySource)
+      })
+
+      it('cannot rebuild low SPD if exchange has not been initiated', () => {
+        const initiator = new Peer('initiator')
+
+        expect(() => initiator.reconstructLowSPD())
+          .toThrowError('cannot reconstruct low SPD, missing seed or encoded payload data')
+
+        initiator.generateInitiateExchangeData()
+
+        expect(() => initiator.reconstructLowSPD())
+          .toThrowError('cannot reconstruct low SPD, missing seed or encoded payload data')
       })
     })
   })

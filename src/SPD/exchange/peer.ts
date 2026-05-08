@@ -9,7 +9,11 @@ export class Peer {
   }
 
   generateInitiateExchangeData(): InitiateExchangeData {
+    if (this.seed)
+      throw new Error('invalid generateInitiateExchangeData call')
+
     const seed = new SplitMix64().state()
+    this.seed = seed
 
     return {
       seed,
@@ -24,12 +28,16 @@ export class Peer {
     return { encodedPayload }
   }
 
-  reconstructLowSPD() { }
+  reconstructLowSPD() {
+    throw new Error('cannot reconstruct low SPD, missing seed or encoded payload data')
+  }
 
   generateFinalizeExchangeData() { }
 
   readonly identifier: string
   readonly transcoder: Transcoder
+
+  private seed?: bigint
 }
 
 type InitiateExchangeData = {
