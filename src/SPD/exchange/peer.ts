@@ -36,9 +36,11 @@ export class Peer {
       throw new Error('cannot reconstruct low SPD, invalid encoded payload size')
   }
 
-  generateFinalizeExchangeData(): Readonly<Buffer<ArrayBuffer>> {
-    return Buffer.from(new ArrayBuffer(SPD.DIMENSIONAL_FACTOR * SPD.HIGH_SPD_SIZE))
+  generateFinalizeExchangeData(): FinalizeExchangeResult {
+    return { encodedHighSPD: Buffer.from(new ArrayBuffer(SPD.DIMENSIONAL_FACTOR * SPD.HIGH_SPD_SIZE)) }
   }
+
+  acceptEncodedHighSPD(encodedHighSPD: Readonly<Buffer<ArrayBuffer>>) { }
 
   readonly identifier: string
   readonly transcoder: Transcoder
@@ -53,4 +55,8 @@ type InitiateExchangeData = {
 
 type InitiateExchangeResult = {
   encodedPayload: Readonly<Buffer<ArrayBuffer>>
+}
+
+type FinalizeExchangeResult = {
+  encodedHighSPD: Readonly<Buffer<ArrayBuffer>>
 }

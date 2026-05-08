@@ -64,7 +64,9 @@ export class Exchanger {
 
     return new Promise<void>(resolve => {
       setImmediate(() => {
-        this.recipient.generateFinalizeExchangeData()
+        const { encodedHighSPD } = this.initiator.generateFinalizeExchangeData()
+        this.recipient.acceptEncodedHighSPD(encodedHighSPD)
+        this.encodedHighSPD = encodedHighSPD
         this.state_ = 'finalized'
 
         resolve()
@@ -76,6 +78,7 @@ export class Exchanger {
   private initiator: Peer
   private recipient: Peer
   private encodedPayload?: Readonly<Buffer<ArrayBuffer>>
+  private encodedHighSPD?: Readonly<Buffer<ArrayBuffer>>
 }
 
 type Options = {

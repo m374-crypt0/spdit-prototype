@@ -95,8 +95,7 @@ describe('SPD test suite', () => {
                 return x
               })
               .forEach(x =>
-                expect(() => x.compute()).toThrowError('invalid compute call')
-              )
+                expect(() => x.compute()).toThrowError('invalid compute call'))
           })
 
           it('should transition from initiated to computing', () => {
@@ -176,12 +175,14 @@ describe('SPD test suite', () => {
             finalizing = exchanger.finalize()
           })
 
-          it('should eventually transition from computing to ready', async () => {
-            const generateFinalizeExchangeData = spyOn(recipient, 'generateFinalizeExchangeData')
+          it('should eventually transition from finalizing to finalized', async () => {
+            const generateFinalizeExchangeData = spyOn(initiator, 'generateFinalizeExchangeData')
+            const acceptEncodedHighSPD = spyOn(recipient, 'acceptEncodedHighSPD')
 
             await finalizing
 
             expect(generateFinalizeExchangeData).toHaveBeenCalled()
+            expect(acceptEncodedHighSPD).toHaveBeenCalled()
             expect(exchanger.state()).toBe('finalized')
           })
         })

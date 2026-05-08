@@ -74,7 +74,7 @@ describe('SPD test suite', () => {
 
         initiator.reconstructLowSPD(encodedPayload)
 
-        const encodedHighSPD = initiator.generateFinalizeExchangeData()
+        const { encodedHighSPD } = initiator.generateFinalizeExchangeData()
 
         expect(encodedHighSPD.byteLength).toBe(SPD.HIGH_SPD_SIZE * SPD.DIMENSIONAL_FACTOR)
       })
