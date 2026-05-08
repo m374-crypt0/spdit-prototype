@@ -1,7 +1,7 @@
 import { Exchanger, Peer, SPD } from "src/SPD";
 import { Transcoder } from "src/transcoding";
 
-import { beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { beforeEach, describe, expect, it, spyOn, xdescribe, xit } from "bun:test";
 
 describe('SPD test suite', () => {
   describe('exchange test suite', () => {
@@ -21,15 +21,19 @@ describe('SPD test suite', () => {
     })
 
     describe('exchange flow', () => {
+      let exchanger: Exchanger
+      let initiator: Peer
+      let recipient: Peer
+
       describe('initiator and recipient share the same low SPD', () => {
         const lowSPD = new SPD('low')
-        const initiator = new Peer('alice', new Transcoder({ lowSPD }))
-        const recipient = new Peer('bob', new Transcoder({ lowSPD }))
 
         describe('from not_started', () => {
-          let exchanger: Exchanger
-
-          beforeEach(() => exchanger = new Exchanger({ initiator, recipient }))
+          beforeEach(() =>
+            exchanger = new Exchanger({
+              initiator: new Peer('initiator', new Transcoder({ lowSPD })),
+              recipient: new Peer('recipient', new Transcoder({ lowSPD }))
+            }))
 
           it('should throw if initiate is called while state is not not_started', () => {
             exchanger.initiate()
@@ -46,10 +50,11 @@ describe('SPD test suite', () => {
         })
 
         describe('from initiating', () => {
-          let exchanger: Exchanger
           let initiating: Promise<void>
 
-          beforeEach(async () => {
+          beforeEach(() => {
+            initiator = new Peer('initiator', new Transcoder({ lowSPD }))
+            recipient = new Peer('recipient', new Transcoder({ lowSPD }))
             exchanger = new Exchanger({ initiator, recipient })
             initiating = exchanger.initiate()
           })
@@ -68,15 +73,20 @@ describe('SPD test suite', () => {
         })
 
         describe('from initiated', () => {
-          let exchanger: Exchanger
-
           beforeEach(async () => {
+            initiator = new Peer('initiator', new Transcoder({ lowSPD }))
+            recipient = new Peer('recipient', new Transcoder({ lowSPD }))
             exchanger = new Exchanger({ initiator, recipient })
             await exchanger.initiate()
           })
 
           it('should throw if ask for compute is done if state is not initiated', () => {
-            const f = () => { return new Exchanger({ initiator, recipient }) }
+            function f() {
+              return new Exchanger({
+                initiator: new Peer('initiator'),
+                recipient: new Peer('recipient')
+              })
+            }
 
             [f(), f()]
               .map((x, i) => {
@@ -97,11 +107,13 @@ describe('SPD test suite', () => {
         })
 
         describe('from computing', () => {
-          let exchanger: Exchanger
           let computing: Promise<void>
 
           beforeEach(async () => {
+            initiator = new Peer('initiator', new Transcoder({ lowSPD }))
+            recipient = new Peer('recipient', new Transcoder({ lowSPD }))
             exchanger = new Exchanger({ initiator, recipient })
+
             await exchanger.initiate()
             computing = exchanger.compute()
           })
@@ -117,16 +129,22 @@ describe('SPD test suite', () => {
         })
 
         describe('from ready', () => {
-          let exchanger: Exchanger
-
           beforeEach(async () => {
+            initiator = new Peer('initiator', new Transcoder({ lowSPD }))
+            recipient = new Peer('recipient', new Transcoder({ lowSPD }))
             exchanger = new Exchanger({ initiator, recipient })
+
             await exchanger.initiate()
             await exchanger.compute()
           })
 
           it('should throw asking for finalize the exchange if not ready', async () => {
-            const f = () => { return new Exchanger({ initiator, recipient }) }
+            function f() {
+              return new Exchanger({
+                initiator: new Peer('initiator'),
+                recipient: new Peer('recipient')
+              })
+            }
 
             [f(), f(), f()]
               .map(async (x, i) => {
@@ -135,8 +153,7 @@ describe('SPD test suite', () => {
                 return x
               })
               .forEach(x =>
-                expect(async () => (await x).finalize()).toThrowError('invalid finalize call')
-              )
+                expect(async () => (await x).finalize()).toThrowError('invalid finalize call'))
           })
 
           it('should transition from ready to finalizing', () => {
@@ -147,11 +164,13 @@ describe('SPD test suite', () => {
         })
 
         describe('from finalizing', () => {
-          let exchanger: Exchanger
           let finalizing: Promise<void>
 
           beforeEach(async () => {
+            initiator = new Peer('initiator', new Transcoder({ lowSPD }))
+            recipient = new Peer('recipient', new Transcoder({ lowSPD }))
             exchanger = new Exchanger({ initiator, recipient })
+
             await exchanger.initiate()
             await exchanger.compute()
             finalizing = exchanger.finalize()

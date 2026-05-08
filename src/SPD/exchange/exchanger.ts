@@ -28,8 +28,11 @@ export class Exchanger {
       // eventual settle of this promise
       setImmediate(() => {
         const { encodedEntropySource, seed } = this.initiator.generateInitiateExchangeData()
-        this.recipient.generateEncodedPayload(seed, encodedEntropySource)
+        const { encodedPayload } = this.recipient.generateEncodedPayload(seed, encodedEntropySource)
+
+        this.encodedPayload = encodedPayload
         this.state_ = 'initiated'
+
         resolve()
       })
     })
@@ -45,7 +48,7 @@ export class Exchanger {
       // NOTE: Forces to wait the next turn of the event loop to simulate an
       // eventual settle of this promise
       setImmediate(() => {
-        this.initiator.reconstructLowSPD()
+        this.initiator.reconstructLowSPD(this.encodedPayload!)
         this.state_ = 'ready'
 
         resolve()
@@ -72,6 +75,7 @@ export class Exchanger {
   private state_: State
   private initiator: Peer
   private recipient: Peer
+  private encodedPayload?: Readonly<Buffer<ArrayBuffer>>
 }
 
 type Options = {

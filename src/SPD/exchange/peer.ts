@@ -28,11 +28,17 @@ export class Peer {
     return { encodedPayload }
   }
 
-  reconstructLowSPD() {
-    throw new Error('cannot reconstruct low SPD, missing seed or encoded payload data')
+  reconstructLowSPD(encodedPayload: Readonly<Buffer<ArrayBuffer>>) {
+    if (!this.seed)
+      throw new Error('cannot reconstruct low SPD before exchange initiate data generation')
+
+    if (encodedPayload.byteLength !== SPD.HIGH_SPD_SIZE * SPD.DIMENSIONAL_FACTOR)
+      throw new Error('cannot reconstruct low SPD, invalid encoded payload size')
   }
 
-  generateFinalizeExchangeData() { }
+  generateFinalizeExchangeData(): Readonly<Buffer<ArrayBuffer>> {
+    return Buffer.from(new ArrayBuffer(SPD.DIMENSIONAL_FACTOR * SPD.HIGH_SPD_SIZE))
+  }
 
   readonly identifier: string
   readonly transcoder: Transcoder

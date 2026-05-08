@@ -51,13 +51,32 @@ describe('SPD test suite', () => {
       it('cannot rebuild low SPD if exchange has not been initiated', () => {
         const initiator = new Peer('initiator')
 
-        expect(() => initiator.reconstructLowSPD())
-          .toThrowError('cannot reconstruct low SPD, missing seed or encoded payload data')
+        expect(() => initiator.reconstructLowSPD(Buffer.from('')))
+          .toThrowError('cannot reconstruct low SPD before exchange initiate data generation')
+      })
 
+      it('cannot rebuild a low SPD if the passed encoded payload is wrong', () => {
+        const initiator = new Peer('initiator')
         initiator.generateInitiateExchangeData()
 
-        expect(() => initiator.reconstructLowSPD())
-          .toThrowError('cannot reconstruct low SPD, missing seed or encoded payload data')
+        expect(() => initiator.reconstructLowSPD(Buffer.from('')))
+          .toThrowError('cannot reconstruct low SPD, invalid encoded payload size')
+      })
+
+      it('should be possible to trivially exchange transcoded data from initiator and recipient sharing the same low SPD', () => {
+        // NOTE: sharing lowSPD ensure the algorithm is correct. Real world use
+        // case will show initiator and recipient with very different low SPD
+        const lowSPD = new SPD('low')
+        const initiator = new Peer('initiator', new Transcoder({ lowSPD }))
+        const recipient = new Peer('recipient', new Transcoder({ lowSPD }))
+        const { seed, encodedEntropySource } = initiator.generateInitiateExchangeData()
+        const { encodedPayload } = recipient.generateEncodedPayload(seed, encodedEntropySource)
+
+        initiator.reconstructLowSPD(encodedPayload)
+
+        const encodedHighSPD = initiator.generateFinalizeExchangeData()
+
+        expect(encodedHighSPD.byteLength).toBe(SPD.HIGH_SPD_SIZE * SPD.DIMENSIONAL_FACTOR)
       })
     })
   })
