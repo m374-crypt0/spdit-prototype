@@ -17,14 +17,22 @@ export class Exchanger {
     return this.state_
   }
 
-  async initiate() {
+  initiate() {
     if (this.state_ !== 'not_started')
       throw new Error('invalid initiate call')
 
-    const { encodedEntropySource, seed } = this.initiator.computeInitiateExchangeData()
-    this.recipient.initiateExchange(seed, encodedEntropySource)
-
     this.state_ = 'initiating'
+
+    return new Promise<void>((resolve) => {
+      // NOTE: Forces to wait the next turn of the event loop to simulate an
+      // eventual settle of this promise
+      setImmediate(() => {
+        const { encodedEntropySource, seed } = this.initiator.computeInitiateExchangeData()
+        this.recipient.initiateExchange(seed, encodedEntropySource)
+        this.state_ = 'initiated'
+        resolve()
+      })
+    })
   }
 
   private state_: State
@@ -37,4 +45,4 @@ type Options = {
   recipient: Party
 }
 
-type State = 'not_started' | 'initiating'
+type State = 'not_started' | 'initiating' | 'initiated'
