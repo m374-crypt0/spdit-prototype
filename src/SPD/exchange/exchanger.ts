@@ -1,3 +1,4 @@
+import { resolve } from "bun"
 import type { Party } from "./"
 
 export class Exchanger {
@@ -23,13 +24,30 @@ export class Exchanger {
 
     this.state_ = 'initiating'
 
-    return new Promise<void>((resolve) => {
+    return new Promise<void>(resolve => {
       // NOTE: Forces to wait the next turn of the event loop to simulate an
       // eventual settle of this promise
       setImmediate(() => {
         const { encodedEntropySource, seed } = this.initiator.computeInitiateExchangeData()
         this.recipient.initiateExchange(seed, encodedEntropySource)
         this.state_ = 'initiated'
+        resolve()
+      })
+    })
+  }
+  askForInitiatorToComputeRecipientLowSPD() {
+    if (this.state_ !== 'initiated')
+      throw new Error('invalid askForInitiatorToComputeRecipientLowSPD call')
+
+    this.state_ = 'computing'
+
+    return new Promise<void>(resolve => {
+      // NOTE: Forces to wait the next turn of the event loop to simulate an
+      // eventual settle of this promise
+      setImmediate(() => {
+        this.initiator.computeLowSPDFromEncodedPayload()
+        this.state_ = 'ready'
+
         resolve()
       })
     })
@@ -45,4 +63,4 @@ type Options = {
   recipient: Party
 }
 
-type State = 'not_started' | 'initiating' | 'initiated'
+type State = 'not_started' | 'initiating' | 'initiated' | 'computing' | 'ready'

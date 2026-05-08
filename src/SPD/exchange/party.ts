@@ -19,6 +19,8 @@ export class Party {
     return { encodedPayload: Buffer.from(new ArrayBuffer(2 * 1 << 16)) }
   }
 
+  computeLowSPDFromEncodedPayload() { }
+
   readonly identifier: string
   readonly transcoder: Transcoder
 }
