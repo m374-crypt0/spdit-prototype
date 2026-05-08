@@ -14,23 +14,29 @@ describe('SPD test suite', () => {
         expect(bob.transcoder).not.toBeUndefined()
       })
 
-      it('should produce well formed exchange data', () => {
+      it('should produce well formed initiate exchange data', () => {
         const initiator = new Peer('initiator')
 
         const { seed, encodedEntropySource } = initiator.generateInitiateExchangeData()
 
+        const highSPD = initiator.transcoder.decodeToHighSPD(encodedEntropySource)
+        const encodedHighSPD = initiator.transcoder.encodeHighSPD(highSPD, { seed })
+
         expect(seed & ((1n << 64n) - 1n)).toBe(seed)
-        expect(encodedEntropySource.byteLength).toBe(1 << 16)
+        expect(encodedHighSPD).toEqual(encodedEntropySource)
       })
 
-      it('should produce well formed encoded payload', () => {
-        const initiator = new Peer('initiator')
-        const recipient = new Peer('recipient')
+      it('should generate well formed encoded payload from the initiate exchange data', () => {
+        // NOTE: sharing lowSPD ensure the algorithm is correct. Real world use
+        // case will show initiator and recipient with very different low SPD
+        const lowSPD = new SPD('low')
+        const initiator = new Peer('initiator', new Transcoder({ lowSPD }))
+        const recipient = new Peer('recipient', new Transcoder({ lowSPD }))
 
         const { seed, encodedEntropySource } = initiator.generateInitiateExchangeData()
         const { encodedPayload } = recipient.generateEncodedPayload(seed, encodedEntropySource)
 
-        expect(encodedPayload.byteLength).toBe(SPD.DIMENSIONAL_FACTOR * SPD.HIGH_SPD_SIZE)
+        expect(encodedPayload).toEqual(encodedEntropySource)
       })
     })
   })

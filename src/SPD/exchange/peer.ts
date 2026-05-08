@@ -9,14 +9,19 @@ export class Peer {
   }
 
   generateInitiateExchangeData(): InitiateExchangeData {
+    const seed = new SplitMix64().state()
+
     return {
-      seed: new SplitMix64().state(),
-      encodedEntropySource: new SPD('high').readonlyBufferView()
+      seed,
+      encodedEntropySource: this.transcoder.encodeHighSPD(new SPD('high'), { seed })
     }
   }
 
   generateEncodedPayload(seed: bigint, encodedEntropySource: Readonly<Buffer<ArrayBuffer>>): InitiateExchangeResult {
-    return { encodedPayload: Buffer.from(new ArrayBuffer(2 * 1 << 16)) }
+    const payload = this.transcoder.decodeToHighSPD(encodedEntropySource)
+    const encodedPayload = this.transcoder.encodeHighSPD(payload, { seed })
+
+    return { encodedPayload }
   }
 
   reconstructLowSPD() { }
