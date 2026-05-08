@@ -145,6 +145,27 @@ describe('SPD test suite', () => {
             expect(exchanger.state()).toBe('finalizing')
           })
         })
+
+        describe('from finalizing', () => {
+          let exchanger: Exchanger
+          let finalizing: Promise<void>
+
+          beforeEach(async () => {
+            exchanger = new Exchanger({ initiator, recipient })
+            await exchanger.initiate()
+            await exchanger.compute()
+            finalizing = exchanger.finalize()
+          })
+
+          it('should eventually transition from computing to ready', async () => {
+            const finalizeExchange = spyOn(recipient, 'finalizeExchange')
+
+            await finalizing
+
+            expect(finalizeExchange).toHaveBeenCalled()
+            expect(exchanger.state()).toBe('finalized')
+          })
+        })
       })
     })
   })

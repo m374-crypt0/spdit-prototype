@@ -59,6 +59,15 @@ export class Exchanger {
       throw new Error('invalid finalize call')
 
     this.state_ = 'finalizing'
+
+    return new Promise<void>(resolve => {
+      setImmediate(() => {
+        this.recipient.finalizeExchange()
+        this.state_ = 'finalized'
+
+        resolve()
+      })
+    })
   }
 
   private state_: State
@@ -71,4 +80,4 @@ type Options = {
   recipient: Party
 }
 
-type State = 'not_started' | 'initiating' | 'initiated' | 'computing' | 'ready' | 'finalizing'
+type State = 'not_started' | 'initiating' | 'initiated' | 'computing' | 'ready' | 'finalizing' | 'finalized'

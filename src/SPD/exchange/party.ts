@@ -21,6 +21,8 @@ export class Party {
 
   computeLowSPDFromEncodedPayload() { }
 
+  finalizeExchange() { }
+
   readonly identifier: string
   readonly transcoder: Transcoder
 }
