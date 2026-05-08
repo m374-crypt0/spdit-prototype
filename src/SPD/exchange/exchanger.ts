@@ -35,9 +35,10 @@ export class Exchanger {
       })
     })
   }
-  askForInitiatorToComputeRecipientLowSPD() {
+
+  compute() {
     if (this.state_ !== 'initiated')
-      throw new Error('invalid askForInitiatorToComputeRecipientLowSPD call')
+      throw new Error('invalid compute call')
 
     this.state_ = 'computing'
 
@@ -53,6 +54,13 @@ export class Exchanger {
     })
   }
 
+  finalize() {
+    if (this.state_ !== 'ready')
+      throw new Error('invalid finalize call')
+
+    this.state_ = 'finalizing'
+  }
+
   private state_: State
   private initiator: Party
   private recipient: Party
@@ -63,4 +71,4 @@ type Options = {
   recipient: Party
 }
 
-type State = 'not_started' | 'initiating' | 'initiated' | 'computing' | 'ready'
+type State = 'not_started' | 'initiating' | 'initiated' | 'computing' | 'ready' | 'finalizing'

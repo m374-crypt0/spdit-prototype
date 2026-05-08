@@ -75,17 +75,22 @@ describe('SPD test suite', () => {
             await exchanger.initiate()
           })
 
-          it('should throw if ask for compute recipient low SPD is done if state is not initiated', () => {
-            const xs = [new Exchanger({ initiator, recipient }), new Exchanger({ initiator, recipient })]
-            xs[1]?.initiate()
+          it('should throw if ask for compute is done if state is not initiated', () => {
+            const f = () => { return new Exchanger({ initiator, recipient }) }
 
-            xs.forEach(x =>
-              expect(() => x.askForInitiatorToComputeRecipientLowSPD())
-                .toThrowError('invalid askForInitiatorToComputeRecipientLowSPD call'))
+            [f(), f()]
+              .map((x, i) => {
+                i === 1 && x.initiate()
+
+                return x
+              })
+              .forEach(x =>
+                expect(() => x.compute()).toThrowError('invalid compute call')
+              )
           })
 
-          it('should ask for the initiator to compute the recipient low SPD, transitioning to computing', () => {
-            exchanger.askForInitiatorToComputeRecipientLowSPD()
+          it('should transition from initiated to computing', () => {
+            exchanger.compute()
 
             expect(exchanger.state()).toBe('computing')
           })
@@ -98,7 +103,7 @@ describe('SPD test suite', () => {
           beforeEach(async () => {
             exchanger = new Exchanger({ initiator, recipient })
             await exchanger.initiate()
-            computing = exchanger.askForInitiatorToComputeRecipientLowSPD()
+            computing = exchanger.compute()
           })
 
           it('should eventually transition from computing to ready', async () => {
@@ -108,6 +113,36 @@ describe('SPD test suite', () => {
 
             expect(computeLowSPDFromEncodedPayload).toHaveBeenCalled()
             expect(exchanger.state()).toBe('ready')
+          })
+        })
+
+        describe('from ready', () => {
+          let exchanger: Exchanger
+
+          beforeEach(async () => {
+            exchanger = new Exchanger({ initiator, recipient })
+            await exchanger.initiate()
+            await exchanger.compute()
+          })
+
+          it('should throw asking for finalize the exchange if not ready', async () => {
+            const f = () => { return new Exchanger({ initiator, recipient }) }
+
+            [f(), f(), f()]
+              .map(async (x, i) => {
+                i === 1 && await x.initiate()
+                i === 2 && await x.initiate() && x.compute()
+                return x
+              })
+              .forEach(x =>
+                expect(async () => (await x).finalize()).toThrowError('invalid finalize call')
+              )
+          })
+
+          it('should transition from ready to finalizing', () => {
+            exchanger.finalize()
+
+            expect(exchanger.state()).toBe('finalizing')
           })
         })
       })
