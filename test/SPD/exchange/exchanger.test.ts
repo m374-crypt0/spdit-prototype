@@ -81,21 +81,14 @@ describe('SPD test suite', () => {
           })
 
           it('should throw if ask for compute is done if state is not initiated', () => {
-            function f() {
-              return new Exchanger({
-                initiator: new Peer('initiator'),
-                recipient: new Peer('recipient')
-              })
-            }
+            const exchanger = new Exchanger({
+              initiator: new Peer('initiator'),
+              recipient: new Peer('recipient')
+            })
 
-            [f(), f()]
-              .map((x, i) => {
-                i === 1 && x.initiate()
+            exchanger.initiate()
 
-                return x
-              })
-              .forEach(x =>
-                expect(() => x.compute()).toThrowError('invalid compute call'))
+            expect(() => exchanger.compute()).toThrowError('invalid compute call')
           })
 
           it('should transition from initiated to computing', () => {
@@ -138,21 +131,15 @@ describe('SPD test suite', () => {
           })
 
           it('should throw asking for finalize the exchange if not ready', async () => {
-            function f() {
-              return new Exchanger({
-                initiator: new Peer('initiator'),
-                recipient: new Peer('recipient')
-              })
-            }
+            const exchanger = new Exchanger({
+              initiator: new Peer('initiator'),
+              recipient: new Peer('recipient')
+            })
 
-            [f(), f(), f()]
-              .map(async (x, i) => {
-                i === 1 && await x.initiate()
-                i === 2 && await x.initiate() && x.compute()
-                return x
-              })
-              .forEach(x =>
-                expect(async () => (await x).finalize()).toThrowError('invalid finalize call'))
+            await exchanger.initiate()
+            exchanger.compute()
+
+            expect(() => exchanger.finalize()).toThrowError('invalid finalize call')
           })
 
           it('should transition from ready to finalizing', () => {
@@ -184,6 +171,31 @@ describe('SPD test suite', () => {
             expect(generateFinalizeExchangeData).toHaveBeenCalled()
             expect(acceptEncodedHighSPD).toHaveBeenCalled()
             expect(exchanger.state()).toBe('finalized')
+          })
+        })
+
+        describe('from finalized', () => {
+          beforeEach(async () => {
+            initiator = new Peer('initiator', new Transcoder({ lowSPD }))
+            recipient = new Peer('recipient', new Transcoder({ lowSPD }))
+            exchanger = new Exchanger({ initiator, recipient })
+
+            await exchanger.initiate()
+            await exchanger.compute()
+            await exchanger.finalize()
+          })
+
+          it('should throw asking for finalize the exchange if not ready', async () => {
+            const exchanger = new Exchanger({
+              initiator: new Peer('initiator'),
+              recipient: new Peer('recipient')
+            })
+
+            await exchanger.initiate()
+            await exchanger.compute()
+            exchanger.finalize()
+
+            expect(() => exchanger.hello()).toThrowError('invalid hello call')
           })
         })
       })

@@ -74,6 +74,10 @@ export class Exchanger {
     })
   }
 
+  hello() {
+    throw new Error('invalid hello call')
+  }
+
   private state_: State
   private initiator: Peer
   private recipient: Peer
