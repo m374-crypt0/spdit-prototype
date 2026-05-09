@@ -5,7 +5,11 @@ import { SPD } from "../create"
 export class Peer {
   constructor(identifier: string, transcoder?: Transcoder) {
     this.identifier = identifier
-    this.transcoder = transcoder ?? new Transcoder
+    this.transcoder_ = transcoder ?? new Transcoder
+  }
+
+  transcoder(): Readonly<Transcoder> {
+    return this.transcoder_
   }
 
   generateInitiateExchangeData(): InitiateExchangeData {
@@ -17,13 +21,13 @@ export class Peer {
 
     return {
       seed,
-      encodedEntropySource: this.transcoder.encodeHighSPD(new SPD('high'), { seed })
+      encodedEntropySource: this.transcoder_.encodeHighSPD(new SPD('high'), { seed })
     }
   }
 
   generateEncodedPayload(seed: bigint, encodedEntropySource: Readonly<Buffer<ArrayBuffer>>): InitiateExchangeResult {
-    const payload = this.transcoder.decodeToHighSPD(encodedEntropySource)
-    const encodedPayload = this.transcoder.encodeHighSPD(payload, { seed })
+    const payload = this.transcoder_.decodeToHighSPD(encodedEntropySource)
+    const encodedPayload = this.transcoder_.encodeHighSPD(payload, { seed })
 
     return { encodedPayload }
   }
@@ -43,8 +47,8 @@ export class Peer {
   acceptEncodedHighSPD(encodedHighSPD: Readonly<Buffer<ArrayBuffer>>) { }
 
   readonly identifier: string
-  readonly transcoder: Transcoder
 
+  private transcoder_: Transcoder
   private seed?: bigint
 }
 

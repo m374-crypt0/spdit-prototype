@@ -66,7 +66,6 @@ export class Exchanger {
       setImmediate(() => {
         const { encodedHighSPD } = this.initiator.generateFinalizeExchangeData()
         this.recipient.acceptEncodedHighSPD(encodedHighSPD)
-        this.encodedHighSPD = encodedHighSPD
         this.state_ = 'finalized'
 
         resolve()
@@ -74,15 +73,10 @@ export class Exchanger {
     })
   }
 
-  hello() {
-    throw new Error('invalid hello call')
-  }
-
   private state_: State
   private initiator: Peer
   private recipient: Peer
   private encodedPayload?: Readonly<Buffer<ArrayBuffer>>
-  private encodedHighSPD?: Readonly<Buffer<ArrayBuffer>>
 }
 
 type Options = {
@@ -90,4 +84,11 @@ type Options = {
   recipient: Peer
 }
 
-type State = 'not_started' | 'initiating' | 'initiated' | 'computing' | 'ready' | 'finalizing' | 'finalized'
+type State =
+  'not_started'
+  | 'initiating'
+  | 'initiated'
+  | 'computing'
+  | 'ready'
+  | 'finalizing'
+  | 'finalized'

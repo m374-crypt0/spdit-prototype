@@ -1,7 +1,7 @@
 import { Exchanger, Peer, SPD } from "src/SPD";
 import { Transcoder } from "src/transcoding";
 
-import { beforeEach, describe, expect, it, spyOn, xdescribe, xit } from "bun:test";
+import { beforeEach, describe, expect, it, spyOn, xit } from "bun:test";
 
 describe('SPD test suite', () => {
   describe('exchange test suite', () => {
@@ -185,17 +185,13 @@ describe('SPD test suite', () => {
             await exchanger.finalize()
           })
 
-          it('should throw asking for finalize the exchange if not ready', async () => {
-            const exchanger = new Exchanger({
-              initiator: new Peer('initiator'),
-              recipient: new Peer('recipient')
-            })
+          xit('should transcode a same message from initiator to recipient', async () => {
+            const message = Math.random().toString()
 
-            await exchanger.initiate()
-            await exchanger.compute()
-            exchanger.finalize()
+            const encoded = initiator.transcoder().encode(message)
+            const decoded = recipient.transcoder().decode(encoded)
 
-            expect(() => exchanger.hello()).toThrowError('invalid hello call')
+            expect(decoded).toBe(message)
           })
         })
       })
