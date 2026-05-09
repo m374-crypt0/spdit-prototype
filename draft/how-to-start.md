@@ -92,7 +92,7 @@ I've some ideas I need to test, demonstrate, and make understandable.
   - The *initiator* ask for the exchange with the *recipient* and creates:
     - an *entropy* source in the form of a *high SPD*
     - a *low SPD* to encode this *entropy* source
-    - a *seed* used for deterministic *entropy* source *encoding*
+    - a *seed* used for deterministic *entropy* source and *payload* *encoding*
   - Then, the *initiator* deterministically encode the *entropy* source using
     the generated *high SPD* (the *entropy* source) and the *seed*
     - > [!NOTE]
@@ -119,8 +119,6 @@ I've some ideas I need to test, demonstrate, and make understandable.
       > *recipient*'s *low SPD*)
   - Then, the *recipient* decodes the received encoded *entropy* and get some
     *payload*
-    - > [!NOTE]
-      > By somehow brute-forcing it
   - Then, the *recipient* deterministically encodes this *payload* using its
     *low SPD* and the received *seed*
     - > [!NOTE]
@@ -133,7 +131,10 @@ I've some ideas I need to test, demonstrate, and make understandable.
     - *initiator*'s *low SPD*
     - encoded *payload*
     - *seed*
-    The *initiator* can rebuild the *recipient*'s *low SPD*
+  - The *initiator* can rebuild the *recipient*'s *low SPD*
+    - > [!NOTE]
+      > At this point, I have to investigate if the *recipient*'s *low SPD*
+      > need to / can be reconstructed.
   - Then, the *initiator* generates a new *high SPD* (no correlation with the
     *entropy* source)
   - Then, the *initiator* encodes this new *high SPD* (non-deterministically
@@ -144,7 +145,7 @@ I've some ideas I need to test, demonstrate, and make understandable.
     SPD* used for both encoding and decoding)
   - Finally, *initiator* and *recipient* can use *SPDIT*
 
-## Seeded hashing
+## Seeded / Universal / Information theoritically secured hashing
 
 I've built a clear mental model about this one, I do not plan anymore
 difficulty so I will work on that later on.
