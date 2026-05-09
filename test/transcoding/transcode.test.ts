@@ -46,7 +46,7 @@ describe('transcoding test suite', () => {
       expect(decodedData).not.toEqual(data)
     })
 
-    xit('should succeeds in decoding data with related transcoders sharing the same high SPD', () => {
+    it('should succeeds in decoding data with related transcoders sharing the same high SPD', () => {
       const highSPD = new SPD('high')
       const xCoder1 = new Transcoder({ highSPD })
       const xCoder2 = new Transcoder({ highSPD })

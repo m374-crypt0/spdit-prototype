@@ -1,8 +1,8 @@
+import { SPD } from "src/SPD";
+import { SplitMix64 } from "src/stochastic";
 import { Transcoder } from "src/transcoding";
 
 import { describe, expect, it } from "bun:test";
-import { SPD } from "src/SPD";
-import { SplitMix64 } from "src/stochastic";
 
 describe('encoding test suite', () => {
   describe('high SPD encoding', () => {
@@ -32,7 +32,7 @@ describe('encoding test suite', () => {
       expect(b1).not.toEqual(b2)
     })
 
-    it('should output the same encoding content each time for seeded encoding', () => {
+    it('should output the same encoded high SPD each time for seeded encoding', () => {
       const spd = new SPD('high')
       const xCoder = new Transcoder
       const seed = new SplitMix64().state()
@@ -59,6 +59,30 @@ describe('encoding test suite', () => {
       const encoded = xCoder.encode(data)
 
       expect(encoded.byteLength).toBe(data.byteLength * SPD.DIMENSIONAL_FACTOR)
+    })
+
+    it('should statistically output different encoded data each time for unseeded encoding', () => {
+      const xCoder = new Transcoder
+      const data = Buffer.from(Math.random().toString())
+
+      const m = new Map<string, number>
+      for (let i = 0; i < 100_000; i++) {
+        const k = xCoder.encode(data).toString()
+        m.set(k, (m.get(k) ?? 0) + 1)
+      }
+
+      expect(m.values().filter(v => v > 1).toArray().length).toBe(0)
+    })
+
+    it('should output the same encoded content each time for seeded encoding', () => {
+      const xCoder = new Transcoder
+      const data = Buffer.from(Math.random().toString())
+      const seed = new SplitMix64().state()
+
+      const b1 = xCoder.encode(data, { seed })
+      const b2 = xCoder.encode(data, { seed })
+
+      expect(b1).toEqual(b2)
     })
   })
 })

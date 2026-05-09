@@ -1,5 +1,5 @@
 import { SPD } from "src/SPD";
-import { SplitMix64, Xoroshiro128Plus } from "src/stochastic";
+import { SplitMix64, UniformUint64, Xoroshiro128Plus } from "src/stochastic";
 import { UniformUint64DistributionEngine } from "src/stochastic/distributionEngines";
 
 /**
@@ -16,6 +16,7 @@ export class Transcoder {
       throw new Error('invalid high SPD specified')
 
     this.lowSPD = options?.lowSPD
+    this.highSPD = options?.highSPD
   }
   /**
    * Specifically encode a SPD of 'high' type using a SPD of 'low' type to do
@@ -25,7 +26,7 @@ export class Transcoder {
    * @throws Error if the spd parameter is not of 'high' type
    * @returns A buffer view on the encoded high SPD
    */
-  encodeHighSPD(highSPD: SPD, options?: EncodeHighSPDOptions) {
+  encodeHighSPD(highSPD: SPD, options?: EncodeOptions) {
     if (highSPD.laneSize !== SPD.HIGH_LANE_SIZE)
       throw new Error('only high SPD can be encoded')
 
@@ -81,21 +82,60 @@ export class Transcoder {
     return SPD.from(spdBuffer)
   }
 
-  encode(buffer: Readonly<Buffer<ArrayBuffer>>): Readonly<Buffer<ArrayBuffer>> {
-    if (buffer.byteLength === 0)
+  /**
+   * Encode arbitrary data using a 'high SPD'
+   * @param data data to encode
+   * @param options various options to modify the default behavior of this function
+   * @returns A buffer view on the encoded data
+   */
+  encode(data: Readonly<Buffer<ArrayBuffer>>, options?: EncodeOptions): Readonly<Buffer<ArrayBuffer>> {
+    if (data.byteLength === 0)
       return Buffer.from(new ArrayBuffer(0))
 
-    return Buffer.from(new ArrayBuffer(buffer.byteLength * SPD.DIMENSIONAL_FACTOR))
+    const map = this.initAndGetHighSPDForEncoding()
+    const buffer = new ArrayBuffer(data.byteLength * SPD.DIMENSIONAL_FACTOR)
+    const dv = new DataView(buffer)
+    const d = new UniformUint64(new Xoroshiro128Plus(new SplitMix64(options?.seed)))
+
+    data
+      .forEach((byte, index) => {
+        const addresses = map.get(byte)!
+        const address = addresses[Number(d.newUint([0n, BigInt(addresses.length - 1)]))]!
+        const i = index * SPD.DIMENSIONAL_FACTOR
+
+        dv.setUint16(i, address)
+      })
+
+    return Buffer.from(buffer)
   }
 
-  decode(buffer: Readonly<Buffer<ArrayBuffer>>): Readonly<Buffer<ArrayBuffer>> {
-    if (buffer.byteLength === 0)
+  /**
+   * Decodes a well-sized buffer of encoded data
+   * @param encodedData the supposed encoded data. Only the buffer byteLength
+   * alignment check for validity
+   * @throws Error if the buffer size alignment does not match with the
+   * dimensional factor of the transcoding scheme
+   * @returns decoded data in regard of the high SPD of this transcoder instance
+   */
+  decode(encodedData: Readonly<Buffer<ArrayBuffer>>): Readonly<Buffer<ArrayBuffer>> {
+    if (encodedData.byteLength === 0)
       return Buffer.from(new ArrayBuffer(0))
 
-    if (buffer.byteLength % SPD.DIMENSIONAL_FACTOR !== 0)
+    if (encodedData.byteLength % SPD.DIMENSIONAL_FACTOR !== 0)
       throw new Error('invalid encoded data')
 
-    return Buffer.from(new ArrayBuffer(buffer.byteLength / SPD.DIMENSIONAL_FACTOR))
+    const highSPD = this.initAndGetHighSPDForDecoding().readonlyBufferView()
+    const buffer = Buffer.from(new ArrayBuffer(encodedData.byteLength / SPD.DIMENSIONAL_FACTOR))
+    const dv = new DataView(encodedData.buffer)
+
+    buffer.forEach((_, index) => {
+      const i = index * SPD.DIMENSIONAL_FACTOR
+      const address = dv.getUint16(i)
+
+      buffer[index] = highSPD[address]!
+    })
+
+    return buffer
   }
 
   private initAndGetLowSPDForDecoding() {
@@ -117,11 +157,32 @@ export class Transcoder {
     return map
   }
 
+  private initAndGetHighSPDForDecoding() {
+    return this.highSPD = this.highSPD ?? new SPD('high')
+  }
+
+  private initAndGetHighSPDForEncoding() {
+    if (this.encodingHighSPD)
+      return this.encodingHighSPD
+
+    const highSPD = this.initAndGetHighSPDForDecoding()
+
+    const map = this.encodingHighSPD = new Map<number, number[]>
+
+    highSPD.readonlyBufferView()
+      .forEach((byte, i) =>
+        map.set(byte, [...map.get(byte) ?? [], i]))
+
+    return map
+  }
+
   private lowSPD: SPD | undefined
+  private highSPD: SPD | undefined
   private encodingLowSPD: Map<number, number[]> | undefined
+  private encodingHighSPD: Map<number, number[]> | undefined
 }
 
-type EncodeHighSPDOptions = {
+type EncodeOptions = {
   /**
    * If defined, this seed will be used to make the random selection of address
    * deterministic. Using the same seed for more than one encoding has
@@ -132,6 +193,13 @@ type EncodeHighSPDOptions = {
 }
 
 type ConstructorOptions = {
+  /**
+   * A pre-built high SPD to intialize this transcoder instance with
+   */
   highSPD?: SPD
+
+  /**
+   * A pre-built low SPD to intialize this transcoder instance with
+   */
   lowSPD?: SPD
 }
