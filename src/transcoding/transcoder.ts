@@ -15,9 +15,24 @@ export class Transcoder {
     if (options && options.highSPD && options.highSPD.laneSize !== SPD.HIGH_LANE_SIZE)
       throw new Error('invalid high SPD specified')
 
-    this.lowSPD = options?.lowSPD
-    this.highSPD = options?.highSPD
+    this.lowSPD_ = options?.lowSPD
+    this.highSPD_ = options?.highSPD
   }
+
+  /**
+   * get a readonly reference to the underlying low SPD
+   */
+  lowSPD(): Readonly<SPD> {
+    return this.initAndGetLowSPDForDecoding()
+  }
+
+  /**
+   * get a readonly reference to the underlying high SPD
+   */
+  highSPD(): Readonly<SPD> {
+    return this.initAndGetHighSPDForDecoding()
+  }
+
   /**
    * Specifically encode a SPD of 'high' type using a SPD of 'low' type to do
    * so.
@@ -139,7 +154,7 @@ export class Transcoder {
   }
 
   private initAndGetLowSPDForDecoding() {
-    return this.lowSPD = this.lowSPD ?? new SPD('low')
+    return this.lowSPD_ = this.lowSPD_ ?? new SPD('low')
   }
 
   private initAndGetLowSPDForEncoding() {
@@ -158,7 +173,7 @@ export class Transcoder {
   }
 
   private initAndGetHighSPDForDecoding() {
-    return this.highSPD = this.highSPD ?? new SPD('high')
+    return this.highSPD_ = this.highSPD_ ?? new SPD('high')
   }
 
   private initAndGetHighSPDForEncoding() {
@@ -176,8 +191,8 @@ export class Transcoder {
     return map
   }
 
-  private lowSPD: SPD | undefined
-  private highSPD: SPD | undefined
+  private lowSPD_: Readonly<SPD> | undefined
+  private highSPD_: Readonly<SPD> | undefined
   private encodingLowSPD: Map<number, number[]> | undefined
   private encodingHighSPD: Map<number, number[]> | undefined
 }
@@ -196,10 +211,10 @@ type ConstructorOptions = {
   /**
    * A pre-built high SPD to intialize this transcoder instance with
    */
-  highSPD?: SPD
+  highSPD?: Readonly<SPD>
 
   /**
    * A pre-built low SPD to intialize this transcoder instance with
    */
-  lowSPD?: SPD
+  lowSPD?: Readonly<SPD>
 }

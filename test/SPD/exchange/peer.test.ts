@@ -1,74 +1,78 @@
-import { Peer, SPD } from "src/SPD";
-import { Transcoder } from "src/transcoding";
+import { Initiator, Recipient, SPD } from "src/SPD"
+import { Transcoder } from "src/transcoding"
 
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "bun:test"
 
 describe('SPD test suite', () => {
   describe('exchange test suite', () => {
     describe('peer test suite', () => {
-      it('should produce well formed initiate exchange data', () => {
-        const initiator = new Peer('initiator')
+      describe('initiator', () => {
+        it('should produce well formed initiate exchange data', () => {
+          const initiator = new Initiator('initiator')
 
-        const { seed, encodedEntropySource } = initiator.generateInitiateExchangeData()
+          const { seed, encodedEntropySource } = initiator.generateInitiateExchangeData()
 
-        const highSPD = initiator.transcoder().decodeToHighSPD(encodedEntropySource)
-        const encodedHighSPD = initiator.transcoder().encodeHighSPD(highSPD, { seed })
+          const highSPD = initiator.transcoder().decodeToHighSPD(encodedEntropySource)
+          const encodedHighSPD = initiator.transcoder().encodeHighSPD(highSPD, { seed })
 
-        expect(seed & ((1n << 64n) - 1n)).toBe(seed)
-        expect(encodedHighSPD).toEqual(encodedEntropySource)
+          expect(seed & ((1n << 64n) - 1n)).toBe(seed)
+          expect(encodedHighSPD).toEqual(encodedEntropySource)
+        })
+
+        it('is not possible to generate initiate exchange data twice', () => {
+          const initiator = new Initiator('initiator')
+
+          initiator.generateInitiateExchangeData()
+
+          expect(() => initiator.generateInitiateExchangeData())
+            .toThrowError('invalid generateInitiateExchangeData call')
+        })
+
+        it('cannot rebuild low SPD if exchange has not been initiated', () => {
+          const initiator = new Initiator('initiator')
+
+          expect(() => initiator.reconstructLowSPD(Buffer.from('')))
+            .toThrowError('cannot reconstruct low SPD before exchange initiate data generation')
+        })
+
+        it('cannot rebuild a low SPD if the passed encoded payload is wrong', () => {
+          const initiator = new Initiator('initiator')
+          initiator.generateInitiateExchangeData()
+
+          expect(() => initiator.reconstructLowSPD(Buffer.from('')))
+            .toThrowError('cannot reconstruct low SPD, invalid encoded payload size')
+        })
+
+        it('should reconstruct the recipient low SPD and generate an encoded high LSP', () => {
+          // NOTE: sharing lowSPD ensure the algorithm is correct. Real world use
+          // case will show initiator and recipient with very different low SPD
+          const lowSPD = new SPD('low')
+          const initiator = new Initiator('initiator', new Transcoder({ lowSPD }))
+          const recipient = new Recipient('recipient', new Transcoder({ lowSPD }))
+          const { seed, encodedEntropySource } = initiator.generateInitiateExchangeData()
+          const { encodedPayload } = recipient.generateEncodedPayload(seed, encodedEntropySource)
+
+          initiator.reconstructLowSPD(encodedPayload)
+
+          const { encodedHighSPD } = initiator.generateFinalizeExchangeData()
+
+          expect(encodedHighSPD.byteLength).toBe(SPD.HIGH_SPD_SIZE * SPD.DIMENSIONAL_FACTOR)
+        })
       })
 
-      it('is not possible to generate initiate exchange data twice', () => {
-        const initiator = new Peer('initiator')
+      describe('recipient', () => {
+        it('should generate well formed encoded payload from the initiate exchange data', () => {
+          // NOTE: sharing lowSPD ensure the algorithm is correct. Real world use
+          // case will show initiator and recipient with very different low SPD
+          const lowSPD = new SPD('low')
+          const initiator = new Initiator('initiator', new Transcoder({ lowSPD }))
+          const recipient = new Recipient('recipient', new Transcoder({ lowSPD }))
 
-        initiator.generateInitiateExchangeData()
+          const { seed, encodedEntropySource } = initiator.generateInitiateExchangeData()
+          const { encodedPayload } = recipient.generateEncodedPayload(seed, encodedEntropySource)
 
-        expect(() => initiator.generateInitiateExchangeData())
-          .toThrowError('invalid generateInitiateExchangeData call')
-      })
-
-      it('should generate well formed encoded payload from the initiate exchange data', () => {
-        // NOTE: sharing lowSPD ensure the algorithm is correct. Real world use
-        // case will show initiator and recipient with very different low SPD
-        const lowSPD = new SPD('low')
-        const initiator = new Peer('initiator', new Transcoder({ lowSPD }))
-        const recipient = new Peer('recipient', new Transcoder({ lowSPD }))
-
-        const { seed, encodedEntropySource } = initiator.generateInitiateExchangeData()
-        const { encodedPayload } = recipient.generateEncodedPayload(seed, encodedEntropySource)
-
-        expect(encodedPayload).toEqual(encodedEntropySource)
-      })
-
-      it('cannot rebuild low SPD if exchange has not been initiated', () => {
-        const initiator = new Peer('initiator')
-
-        expect(() => initiator.reconstructLowSPD(Buffer.from('')))
-          .toThrowError('cannot reconstruct low SPD before exchange initiate data generation')
-      })
-
-      it('cannot rebuild a low SPD if the passed encoded payload is wrong', () => {
-        const initiator = new Peer('initiator')
-        initiator.generateInitiateExchangeData()
-
-        expect(() => initiator.reconstructLowSPD(Buffer.from('')))
-          .toThrowError('cannot reconstruct low SPD, invalid encoded payload size')
-      })
-
-      it('should be possible to trivially exchange transcoded data from initiator and recipient sharing the same low SPD', () => {
-        // NOTE: sharing lowSPD ensure the algorithm is correct. Real world use
-        // case will show initiator and recipient with very different low SPD
-        const lowSPD = new SPD('low')
-        const initiator = new Peer('initiator', new Transcoder({ lowSPD }))
-        const recipient = new Peer('recipient', new Transcoder({ lowSPD }))
-        const { seed, encodedEntropySource } = initiator.generateInitiateExchangeData()
-        const { encodedPayload } = recipient.generateEncodedPayload(seed, encodedEntropySource)
-
-        initiator.reconstructLowSPD(encodedPayload)
-
-        const { encodedHighSPD } = initiator.generateFinalizeExchangeData()
-
-        expect(encodedHighSPD.byteLength).toBe(SPD.HIGH_SPD_SIZE * SPD.DIMENSIONAL_FACTOR)
+          expect(encodedPayload).toEqual(encodedEntropySource)
+        })
       })
     })
   })

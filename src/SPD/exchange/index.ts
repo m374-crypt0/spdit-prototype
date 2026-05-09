@@ -1,4 +1,4 @@
 import { Exchanger } from './exchanger'
-import { Peer } from './peer'
+import { Initiator, Recipient } from './peers'
 
-export { Exchanger, Peer }
+export { Exchanger, Initiator, Recipient }

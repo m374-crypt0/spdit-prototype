@@ -1,4 +1,4 @@
 import { SPD } from "./create";
-import { Exchanger, Peer } from "./exchange/";
+import { Exchanger, Initiator, Recipient } from "./exchange/";
 
-export { Exchanger, Peer, SPD };
+export { Exchanger, Initiator, Recipient, SPD };

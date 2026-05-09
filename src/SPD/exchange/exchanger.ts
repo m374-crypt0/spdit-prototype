@@ -1,4 +1,4 @@
-import type { Peer } from "./"
+import type { Initiator, Recipient } from "./"
 
 export class Exchanger {
   constructor(options: Options) {
@@ -31,6 +31,7 @@ export class Exchanger {
         const { encodedPayload } = this.recipient.generateEncodedPayload(seed, encodedEntropySource)
 
         this.encodedPayload = encodedPayload
+        this.seed = seed
         this.state_ = 'initiated'
 
         resolve()
@@ -73,15 +74,17 @@ export class Exchanger {
     })
   }
 
+  seed?: bigint
+
   private state_: State
-  private initiator: Peer
-  private recipient: Peer
+  private initiator: Initiator
+  private recipient: Recipient
   private encodedPayload?: Readonly<Buffer<ArrayBuffer>>
 }
 
 type Options = {
-  initiator: Peer,
-  recipient: Peer
+  initiator: Initiator,
+  recipient: Recipient
 }
 
 type State =

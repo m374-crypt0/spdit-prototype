@@ -1,38 +1,39 @@
-import { Exchanger, Peer, SPD } from "src/SPD";
+import { Exchanger, Initiator, Recipient, SPD } from "src/SPD";
 import { Transcoder } from "src/transcoding";
 
-import { beforeEach, describe, expect, it, spyOn, xit } from "bun:test";
+import { beforeEach, describe, expect, it, spyOn } from "bun:test";
 
 describe('SPD test suite', () => {
   describe('exchange test suite', () => {
     describe('exchanger instantiation', () => {
       it('should throw at initializing an exchange between an intiator and himself', () => {
-        const initiator = new Peer('alice')
+        const initiator = new Initiator('alice')
+        const recipient = new Recipient('alice')
 
-        expect(() => new Exchanger({ initiator, recipient: initiator }))
+        expect(() => new Exchanger({ initiator, recipient }))
           .toThrowError('invalid exchange configuration, initiator must be different from recipient')
       })
 
       it('should report the state of an exchange as not_started when instantiated', () => {
-        const initiator = new Peer('alice')
-        const recipient = new Peer('bob')
+        const initiator = new Initiator('alice')
+        const recipient = new Recipient('bob')
         expect(new Exchanger({ initiator, recipient }).state()).toBe('not_started')
       })
     })
 
     describe('exchange flow', () => {
       let exchanger: Exchanger
-      let initiator: Peer
-      let recipient: Peer
+      let initiator: Initiator
+      let recipient: Recipient
 
       describe('initiator and recipient share the same low SPD', () => {
-        const lowSPD = new SPD('low')
+        const transcoder = new Transcoder({ lowSPD: new SPD('low') })
 
         describe('from not_started', () => {
           beforeEach(() =>
             exchanger = new Exchanger({
-              initiator: new Peer('initiator', new Transcoder({ lowSPD })),
-              recipient: new Peer('recipient', new Transcoder({ lowSPD }))
+              initiator: new Initiator('initiator', transcoder),
+              recipient: new Recipient('recipient', transcoder)
             }))
 
           it('should throw if initiate is called while state is not not_started', () => {
@@ -53,8 +54,8 @@ describe('SPD test suite', () => {
           let initiating: Promise<void>
 
           beforeEach(() => {
-            initiator = new Peer('initiator', new Transcoder({ lowSPD }))
-            recipient = new Peer('recipient', new Transcoder({ lowSPD }))
+            initiator = new Initiator('initiator', transcoder)
+            recipient = new Recipient('recipient', transcoder)
             exchanger = new Exchanger({ initiator, recipient })
             initiating = exchanger.initiate()
           })
@@ -74,16 +75,16 @@ describe('SPD test suite', () => {
 
         describe('from initiated', () => {
           beforeEach(async () => {
-            initiator = new Peer('initiator', new Transcoder({ lowSPD }))
-            recipient = new Peer('recipient', new Transcoder({ lowSPD }))
+            initiator = new Initiator('initiator', transcoder)
+            recipient = new Recipient('recipient', transcoder)
             exchanger = new Exchanger({ initiator, recipient })
             await exchanger.initiate()
           })
 
           it('should throw if ask for compute is done if state is not initiated', () => {
             const exchanger = new Exchanger({
-              initiator: new Peer('initiator'),
-              recipient: new Peer('recipient')
+              initiator: new Initiator('initiator'),
+              recipient: new Recipient('recipient')
             })
 
             exchanger.initiate()
@@ -102,8 +103,8 @@ describe('SPD test suite', () => {
           let computing: Promise<void>
 
           beforeEach(async () => {
-            initiator = new Peer('initiator', new Transcoder({ lowSPD }))
-            recipient = new Peer('recipient', new Transcoder({ lowSPD }))
+            initiator = new Initiator('initiator', transcoder)
+            recipient = new Recipient('recipient', transcoder)
             exchanger = new Exchanger({ initiator, recipient })
 
             await exchanger.initiate()
@@ -122,8 +123,8 @@ describe('SPD test suite', () => {
 
         describe('from ready', () => {
           beforeEach(async () => {
-            initiator = new Peer('initiator', new Transcoder({ lowSPD }))
-            recipient = new Peer('recipient', new Transcoder({ lowSPD }))
+            initiator = new Initiator('initiator', transcoder)
+            recipient = new Recipient('recipient', transcoder)
             exchanger = new Exchanger({ initiator, recipient })
 
             await exchanger.initiate()
@@ -132,8 +133,8 @@ describe('SPD test suite', () => {
 
           it('should throw asking for finalize the exchange if not ready', async () => {
             const exchanger = new Exchanger({
-              initiator: new Peer('initiator'),
-              recipient: new Peer('recipient')
+              initiator: new Initiator('initiator'),
+              recipient: new Recipient('recipient')
             })
 
             await exchanger.initiate()
@@ -153,8 +154,8 @@ describe('SPD test suite', () => {
           let finalizing: Promise<void>
 
           beforeEach(async () => {
-            initiator = new Peer('initiator', new Transcoder({ lowSPD }))
-            recipient = new Peer('recipient', new Transcoder({ lowSPD }))
+            initiator = new Initiator('initiator', transcoder)
+            recipient = new Recipient('recipient', transcoder)
             exchanger = new Exchanger({ initiator, recipient })
 
             await exchanger.initiate()
@@ -176,8 +177,8 @@ describe('SPD test suite', () => {
 
         describe('from finalized', () => {
           beforeEach(async () => {
-            initiator = new Peer('initiator', new Transcoder({ lowSPD }))
-            recipient = new Peer('recipient', new Transcoder({ lowSPD }))
+            initiator = new Initiator('initiator', transcoder)
+            recipient = new Recipient('recipient', transcoder)
             exchanger = new Exchanger({ initiator, recipient })
 
             await exchanger.initiate()
@@ -185,13 +186,13 @@ describe('SPD test suite', () => {
             await exchanger.finalize()
           })
 
-          xit('should transcode a same message from initiator to recipient', async () => {
-            const message = Math.random().toString()
+          it('should transcode a same message from initiator to recipient', async () => {
+            const message = Buffer.from(Math.random().toString())
 
             const encoded = initiator.transcoder().encode(message)
             const decoded = recipient.transcoder().decode(encoded)
 
-            expect(decoded).toBe(message)
+            expect(decoded).toEqual(message)
           })
         })
       })
