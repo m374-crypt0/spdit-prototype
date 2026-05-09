@@ -1,10 +1,10 @@
 import { Transcoder } from "src/transcoding";
 
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, xit } from "bun:test";
 import { SPD } from "src/SPD";
 
 describe('transcoding test suite', () => {
-  describe('Cross transcoder decoding', () => {
+  describe('high SPD transcoding', () => {
     it('should fail to decode and encoded high SPD with an unrelated transcoder', () => {
       const xCoder1 = new Transcoder
       const xCoder2 = new Transcoder
@@ -30,6 +30,33 @@ describe('transcoding test suite', () => {
 
       expect(validDecodedSPD.readonlyBufferView()).toEqual(spd.readonlyBufferView())
       expect(stillValidDecodedSPD.readonlyBufferView()).toEqual(spd.readonlyBufferView())
+    })
+  })
+
+  describe('arbitrary data transcoding', () => {
+    it('should fail to decode data with 2 unrelated transcoders', () => {
+      const xCoder1 = new Transcoder
+      const xCoder2 = new Transcoder
+      const data = Buffer.from('super secret data')
+
+      const encodedData = xCoder1.encode(data)
+      const decodedData = xCoder2.decode(encodedData)
+
+      expect(encodedData).not.toEqual(data)
+      expect(decodedData).not.toEqual(data)
+    })
+
+    xit('should succeeds in decoding data with related transcoders sharing the same high SPD', () => {
+      const highSPD = new SPD('high')
+      const xCoder1 = new Transcoder({ highSPD })
+      const xCoder2 = new Transcoder({ highSPD })
+      const data = Buffer.from('super secret data')
+
+      const encodedData = xCoder1.encode(data)
+      const decodedData = xCoder2.decode(encodedData)
+
+      expect(encodedData).not.toEqual(data)
+      expect(decodedData).toEqual(data)
     })
   })
 })

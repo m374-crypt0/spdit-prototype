@@ -5,7 +5,7 @@ import { SPD } from "src/SPD";
 import { SplitMix64 } from "src/stochastic";
 
 describe('encoding test suite', () => {
-  describe('High SPD encoding', () => {
+  describe('high SPD encoding', () => {
     it('should fail if encodeHighSPD is used with a low type SPD', () => {
       const spd = new SPD('low')
       const xCoder = new Transcoder
@@ -13,7 +13,7 @@ describe('encoding test suite', () => {
       expect(() => xCoder.encodeHighSPD(spd)).toThrowError('only high SPD can be encoded')
     })
 
-    it('should encode a high SPD giving a buffer that is different and 2 time bigger than the spd itself', () => {
+    it('should encode a high SPD giving a well sized buffer according the dimensional factor', () => {
       const spd = new SPD('high')
       const xCoder = new Transcoder
 
@@ -41,6 +41,24 @@ describe('encoding test suite', () => {
       const b2 = xCoder.encodeHighSPD(spd, { seed })
 
       expect(b1).toEqual(b2)
+    })
+  })
+
+  describe('arbitrary data encoding', () => {
+    it('should encode empty data to empty output', () => {
+      const xCoder = new Transcoder
+      const data = Buffer.from(new ArrayBuffer(0))
+
+      expect(xCoder.encode(data)).toEqual(data)
+    })
+
+    it('should encode non empty data to well sized buffer according to dimensional factor', () => {
+      const xCoder = new Transcoder
+      const data = Buffer.from('data')
+
+      const encoded = xCoder.encode(data)
+
+      expect(encoded.byteLength).toBe(data.byteLength * SPD.DIMENSIONAL_FACTOR)
     })
   })
 })

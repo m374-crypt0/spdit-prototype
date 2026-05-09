@@ -81,6 +81,23 @@ export class Transcoder {
     return SPD.from(spdBuffer)
   }
 
+  encode(buffer: Readonly<Buffer<ArrayBuffer>>): Readonly<Buffer<ArrayBuffer>> {
+    if (buffer.byteLength === 0)
+      return Buffer.from(new ArrayBuffer(0))
+
+    return Buffer.from(new ArrayBuffer(buffer.byteLength * SPD.DIMENSIONAL_FACTOR))
+  }
+
+  decode(buffer: Readonly<Buffer<ArrayBuffer>>): Readonly<Buffer<ArrayBuffer>> {
+    if (buffer.byteLength === 0)
+      return Buffer.from(new ArrayBuffer(0))
+
+    if (buffer.byteLength % SPD.DIMENSIONAL_FACTOR !== 0)
+      throw new Error('invalid encoded data')
+
+    return Buffer.from(new ArrayBuffer(buffer.byteLength / SPD.DIMENSIONAL_FACTOR))
+  }
+
   private initAndGetLowSPDForDecoding() {
     return this.lowSPD = this.lowSPD ?? new SPD('low')
   }
