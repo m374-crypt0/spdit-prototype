@@ -75,7 +75,7 @@ I've some ideas I need to test, demonstrate, and make understandable.
   - [x] deterministic *encoding*, needed for *high SPD* exchange feature
     (intuition) and for *seeded hashing*
   - [x] encode and decode any content (need a *high SPD*)
-- [x] DONE  
+- [x] DONE
 
 ### Fourth task: design the exchange protocol
 
@@ -87,6 +87,23 @@ I've some ideas I need to test, demonstrate, and make understandable.
   - *recipient*, the other peer the *initiator* deals with
 - Start with an easy case: each party share the same *low SPD*
 - Then, generalize for any *low SPD*
+- constraints:
+  - do as less as round-trip as possible between the *initiator* and the
+    *recipient*
+    - > [!NOTE]
+      > The [Flow](#flow-of-the-high-spd-exchange) described below shows the
+      > following:
+      > from *initiator* to *recipient*: encoded *entropy* source and *seed*
+      > from *recipient* to *initiator*: encoded *payload*
+      > from *initiator* to *recipient*: encoded *seed* and encoded *high SPD*
+    - One round-trip plus one trip
+    - 128 kb-sized encoded *entropy* and *payload* transfer for each trip, plus
+      64-bits for each *seed*, quite a lot, need to reduce
+      - > [!NOTE]
+        > invent a new type of *SPD* called *null SPD*
+        > one order of magnitude smaller than *low SPD*
+  - transfer the least amount of information possible for the exchange to make
+    it practical in constrained environments
 
 #### Flow of the *high SPD* exchange
 
@@ -105,8 +122,7 @@ I've some ideas I need to test, demonstrate, and make understandable.
         > So far, a *low SPD* can only encode a *high SPD*. This fact is
         > important to keep in mind in the case the entropy source becomes
         > something else than a *high SPD*
-    - a *seed* used to deterministic encode the *entropy* source and the
-      *payload*
+    - a *seed* used to deterministic encode the *entropy* source
   - Then, the *initiator* deterministically encode the *entropy* source using
     the generated *high SPD* (the *entropy* source) and the *seed*
     - > [!NOTE]
@@ -165,7 +181,6 @@ I've some ideas I need to test, demonstrate, and make understandable.
           > an optimal size regarding the size of the *common alphabet* I need.
           > Talking about this *common alphabet*, it needs to be sufficiently
           > large to encode a 64-bits sized integer
-
   - Then, the *initiator* compute a 64-bits sized *seed* (not related to the
     *seed* mentioned earlier)
   - Then, the *initiator* encodes this *seed* using the *common alphabet*
@@ -178,7 +193,9 @@ I've some ideas I need to test, demonstrate, and make understandable.
       > presenting adversarial behavior, an attacker could not establish any
       > correlation between the encoded seed and the actual seed value. The best
       > it could do is randomly guessing. I have the intuition it is *information
-      > theoritically secured*. I could use some help to confirm.
+      > theoritically secured*. I could use some help to confirm. As a
+      > mitigation measure, it may be possible to encode the *seed* several times
+      > in a row to further enhance the entropy of the transferred payload
   - Then, the *initiator* generates a new *low SPD* deterministically using
     this new *seed*
     - > [!NOTE]
