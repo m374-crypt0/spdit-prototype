@@ -34,7 +34,7 @@ describe('exchange test suite', () => {
           .toThrowError('invalid finalizeExchange call')
       })
 
-      it('cannot finalize the eschange if the passed encoded payload is wrong', () => {
+      it('cannot finalize the exchange if the passed encoded payload is wrong', () => {
         const initiator = new Initiator('initiator')
         initiator.initiateExchange()
 
@@ -42,7 +42,7 @@ describe('exchange test suite', () => {
           .toThrowError('cannot finalize the exchange, invalid encoded payload size')
       })
 
-      it('should finalize the exchange and provide an encoded high SPD', () => {
+      it('should finalize the exchange and provide an encoded high SPD, discarding old lowSPD', () => {
         // NOTE: sharing lowSPD ensure the algorithm is correct. Real world use
         // case will show initiator and recipient with very different low SPD
         const lowSPD = new SPD('low')
@@ -54,6 +54,7 @@ describe('exchange test suite', () => {
         const { encodedHighSPD } = initiator.finalizeExchange(encodedPayload)
 
         expect(encodedHighSPD.byteLength).toBe(SPD.HIGH_SPD_SIZE * SPD.DIMENSIONAL_FACTOR)
+        expect(initiator.transcoder().lowSPD().readonlyBufferView()).not.toEqual(lowSPD.readonlyBufferView())
       })
     })
 

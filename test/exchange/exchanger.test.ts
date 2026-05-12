@@ -1,6 +1,6 @@
 import { Exchanger, Initiator, Recipient } from "src/exchange";
 
-import { beforeEach, describe, expect, it, spyOn, xit } from "bun:test";
+import { beforeEach, describe, expect, it, spyOn, xdescribe } from "bun:test";
 import { SPD, Transcoder } from "src/transcoding";
 
 describe('exchange test suite', () => {
@@ -144,11 +144,27 @@ describe('exchange test suite', () => {
           })
         })
 
-        describe('initiator and recipient do not share the same initial low SPD', () => {
+        xdescribe('initiator and recipient do not share the same initial low SPD', () => {
           beforeEach(() => {
             exchanger.initiate()
             exchanger.accept()
             exchanger.finalize()
+          })
+
+          it('should allow transcoding between initiator and recipient', () => {
+            const originalMessage = Buffer.from('Hello SPDIT from initiator!')
+            const encodedMessage = initiator.transcoder().encode(originalMessage)
+            const decodedMessage = recipient.transcoder().decode(encodedMessage)
+
+            expect(decodedMessage).toEqual(originalMessage)
+          })
+
+          it('should allow transcoding between recipient and initiator', () => {
+            const originalMessage = Buffer.from('Hello SPDIT from recipient!')
+            const encodedMessage = recipient.transcoder().encode(originalMessage)
+            const decodedMessage = initiator.transcoder().decode(encodedMessage)
+
+            expect(decodedMessage).toEqual(originalMessage)
           })
         })
       })

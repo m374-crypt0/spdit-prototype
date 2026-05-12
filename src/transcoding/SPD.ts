@@ -1,4 +1,4 @@
-import { shuffleBuffer, UniformUint64 } from "src/stochastic"
+import { shuffleBuffer, SplitMix64, UniformUint64, Xoroshiro128Plus } from "src/stochastic"
 
 /**
  * Stochastic Private Dimensional transcoding table
@@ -16,11 +16,11 @@ export class SPD {
     this.laneSize = type === 'low' ? SPD.LOW_LANE_SIZE : SPD.HIGH_LANE_SIZE
     this.size = type === 'low' ? SPD.LOW_SPD_SIZE : SPD.HIGH_SPD_SIZE
 
-    if (options?.buffer)
+    if (options?.kind === 'buffer' && options.buffer)
       this.buffer = options.buffer.buffer
     else {
       this.buffer = new ArrayBuffer(this.size, { maxByteLength: this.size })
-      this.initializeBuffer()
+      this.initializeBuffer(options)
     }
   }
 
@@ -36,7 +36,7 @@ export class SPD {
     if (byteLength !== SPD.LOW_SPD_SIZE && byteLength !== SPD.HIGH_SPD_SIZE)
       throw new Error('invalid buffer size')
 
-    return new SPD(byteLength === this.LOW_SPD_SIZE ? 'low' : 'high', { buffer })
+    return new SPD(byteLength === this.LOW_SPD_SIZE ? 'low' : 'high', { kind: 'buffer', buffer })
   }
 
   /**
@@ -102,12 +102,15 @@ export class SPD {
 
   private buffer: ArrayBuffer
 
-  private initializeBuffer() {
+  private initializeBuffer(options?: Options) {
+    const seed = options?.kind === 'seed' ? options.seed : undefined
+    const d = new UniformUint64(new Xoroshiro128Plus(new SplitMix64(seed)))
+
     this.generateLanes()
-    this.shuffleLanes()
+    this.shuffleLanes(d)
     this.transposeBuffer()
-    this.shuffleLanes()
-    this.overwriteFewValuesInAllLanes()
+    this.shuffleLanes(d)
+    this.overwriteFewValuesInAllLanes(d)
   }
 
   private bufferView() {
@@ -137,15 +140,13 @@ export class SPD {
     }
   }
 
-  private shuffleLanes() {
+  private shuffleLanes(d: UniformUint64) {
     Iterator.from(this)
       .forEach((_, i) =>
-        shuffleBuffer(this.bufferView().subarray(this.laneSize * i, this.laneSize * (i + 1))))
+        shuffleBuffer(this.bufferView().subarray(this.laneSize * i, this.laneSize * (i + 1)), d))
   }
 
-  private overwriteFewValuesInAllLanes() {
-    const d = new UniformUint64
-
+  private overwriteFewValuesInAllLanes(d: UniformUint64) {
     Iterator.from(this)
       .forEach((_, i) => {
         let laneBitSize = 0
@@ -164,12 +165,20 @@ export class SPD {
   }
 }
 
-type Options = {
+type Options = BufferOptions | SeedOptions
+
+type BufferOptions = {
   /**
    * A buffer to initialize a SPD instance with.
    * Note that there are no check done on the buffer content. Only its
    * byteLength is checked to ensure it will fit either on a 'low' or 'high'
    * SPD
    */
-  buffer?: Readonly<Buffer<ArrayBuffer>>
+  buffer?: Readonly<Buffer<ArrayBuffer>>,
+  kind: 'buffer'
+}
+
+type SeedOptions = {
+  seed?: bigint,
+  kind: 'seed'
 }

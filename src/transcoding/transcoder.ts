@@ -41,7 +41,7 @@ export class Transcoder {
    * @throws Error if the spd parameter is not of 'high' type
    * @returns A buffer view on the encoded high SPD
    */
-  encodeHighSPD(highSPD: SPD, options?: EncodeOptions) {
+  encodeHighSPD(highSPD: Readonly<SPD>, options?: EncodeOptions) {
     if (highSPD.laneSize !== SPD.HIGH_LANE_SIZE)
       throw new Error('only high SPD can be encoded')
 
@@ -125,7 +125,7 @@ export class Transcoder {
   }
 
   /**
-   * Decodes a well-sized buffer of encoded data
+   * Decodes a well-sized buffer of encoded data using the high SPD
    * @param encodedData the supposed encoded data. Only the buffer byteLength
    * alignment check for validity
    * @throws Error if the buffer size alignment does not match with the

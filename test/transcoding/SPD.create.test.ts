@@ -1,6 +1,7 @@
 import { SPD } from "src/transcoding";
 
 import { describe, expect, it } from "bun:test";
+import { SplitMix64 } from "src/stochastic";
 
 describe('SPD test suite', () => {
   describe('creation', () => {
@@ -109,6 +110,26 @@ describe('SPD test suite', () => {
         const spd = SPD.from(b)
 
         expect(spd.laneSize).toBe(p.laneSize)
+      })
+  })
+
+  describe('deterministic SPD creation', () => {
+    it.each(['low', 'high'])
+      ('should create different SPD each time constructor is called without a seed', (type) => {
+        const spd1 = new SPD(type)
+        const spd2 = new SPD(type)
+
+        expect(spd1.readonlyBufferView()).not.toEqual(spd2.readonlyBufferView())
+      })
+
+    it.each(['low', 'high'])
+      ('should create the same SPD when constructed with the same seed', (type) => {
+        const seed = new SplitMix64().state()
+
+        const spd1 = new SPD(type, { kind: 'seed', seed })
+        const spd2 = new SPD(type, { kind: 'seed', seed })
+
+        expect(spd1.readonlyBufferView()).toEqual(spd2.readonlyBufferView())
       })
   })
 })

@@ -39,8 +39,8 @@ export class Exchanger {
     if (this.encodedPayload === undefined || this.state_ !== 'accepted')
       throw new Error('invalid finalize call')
 
-    const { encodedHighSPD } = this.initiator.finalizeExchange(this.encodedPayload)
-    this.recipient.finalizeExchange(encodedHighSPD)
+    const { encodedSeed, encodedHighSPD } = this.initiator.finalizeExchange(this.encodedPayload)
+    this.recipient.finalizeExchange({ encodedSeed, encodedHighSPD })
 
     this.state_ = 'finalized'
   }
