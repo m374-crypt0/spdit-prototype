@@ -22,9 +22,9 @@ export class Initiator extends Peer {
     super(identifier, transcoder)
   }
 
-  generateInitiateExchangeData(): InitiateExchangeData {
+  initiateExchange(): InitiateExchangeData {
     if (this.seed)
-      throw new Error('invalid generateInitiateExchangeData call')
+      throw new Error('invalid initiateExchange call')
 
     const seed = new SplitMix64().state()
     const encodedEntropySource = this.transcoder_.encodeHighSPD(new SPD('high'), { seed })
@@ -38,12 +38,12 @@ export class Initiator extends Peer {
     }
   }
 
-  reconstructLowSPD(encodedPayload: Readonly<Buffer<ArrayBuffer>>) {
+  finalizeExchange(encodedPayload: Readonly<Buffer<ArrayBuffer>>): FinalizeExchangeResult {
     if (!this.seed || !this.encodedEntropySource)
-      throw new Error('cannot reconstruct low SPD before exchange initiate data generation')
+      throw new Error('invalid finalizeExchange call')
 
     if (encodedPayload.byteLength !== SPD.HIGH_SPD_SIZE * SPD.DIMENSIONAL_FACTOR)
-      throw new Error('cannot reconstruct low SPD, invalid encoded payload size')
+      throw new Error('cannot finalize the exchange, invalid encoded payload size')
 
     // NOTE: specific case where initiator and recipient share the same low SPD
     if (encodedPayload.compare(this.encodedEntropySource) === 0)
@@ -51,9 +51,7 @@ export class Initiator extends Peer {
         lowSPD: this.transcoder_.lowSPD(),
         highSPD: this.transcoder_.highSPD()
       })
-  }
 
-  generateFinalizeExchangeData(): FinalizeExchangeResult {
     const highSPD = new SPD('high')
     const encodedHighSPD = this.transcoder_.encodeHighSPD(highSPD)
 
@@ -74,14 +72,14 @@ export class Recipient extends Peer {
     super(identifier, transcoder)
   }
 
-  generateEncodedPayload(seed: bigint, encodedEntropySource: Readonly<Buffer<ArrayBuffer>>): InitiateExchangeResult {
+  acceptExchange(seed: bigint, encodedEntropySource: Readonly<Buffer<ArrayBuffer>>): InitiateExchangeResult {
     const payload = this.transcoder_.decodeToHighSPD(encodedEntropySource)
     const encodedPayload = this.transcoder_.encodeHighSPD(payload, { seed })
 
     return { encodedPayload }
   }
 
-  acceptEncodedHighSPD(encodedHighSPD: Readonly<Buffer<ArrayBuffer>>) {
+  finalizeExchange(encodedHighSPD: Readonly<Buffer<ArrayBuffer>>) {
     this.transcoder_ = new Transcoder({
       highSPD: this.transcoder_.decodeToHighSPD(encodedHighSPD),
       lowSPD: this.transcoder_.lowSPD()
