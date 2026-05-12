@@ -107,122 +107,168 @@ I've some ideas I need to test, demonstrate, and make understandable.
 
 #### Flow of the *high SPD* exchange
 
-- Model a new concept for the *exchange*, a new class responsible of it
-  - Involves 2 peers, an *initiator* and a *recipient*
-  - represents a *flow* with steps depending on each other
-  - The *initiator* ask for the exchange with the *recipient* and creates:
-    - an *entropy* source in the form of a *high SPD*
-      - > [!NOTE]
-        > A *high SPD* is the most certain way to get sufficient entropy and
-        > data for further steps of the flow. It *may* be possible to use less
-        > data for the entropy but measures and tests are necessary to asses
-        > this fact.
-    - a *low SPD* to encode this *entropy* source
-      - > [!NOTE]
-        > So far, a *low SPD* can only encode a *high SPD*. This fact is
-        > important to keep in mind in the case the entropy source becomes
-        > something else than a *high SPD*
-    - a *seed* used to deterministic encode the *entropy* source
-  - Then, the *initiator* deterministically encode the *entropy* source using
-    the generated *high SPD* (the *entropy* source) and the *seed*
-    - > [!NOTE]
-      > deterministic encoding has catastrophic consequences on the security
-      > of *SPDIT* if used more than once with the same *SPD*, either *low* or
-      > *high*. In this case, we're safe as it is used only once here.
-  - Then, the *initiator* sends both the *seed* and the encoded *entropy* source
-    - > [!NOTE]
-      > An entropy source smaller than the *high SPD* could be desirable here.
-      > 128kb is kind of hefty to transfer
-    - > [!NOTE]
-      > At this point, considering the network has an adversarial behavior, the
-      > only information an *attacker* gets is both the *seed* and the encoded
-      > *high SPD*. Nothing could be retrieved to reconstruct the *initiator*'s
-      > *low SPD*.
-  - Eventually, the *recipient* receives both the *seed* and the encoded
-    *entropy* source
-  - Then, the *recipient* generates its own *low SPD* totally unrelated to the
-    *initiator*'s one
-    - > [!NOTE]
-      > A very specific test will be designed using the very same *low SPD* for
-      > both the *initiator* and the *recipient*. It will emphasize the security
-      > loss consequences of using deterministic encoding with the same *SPD*.
-      > To put it shortly, thanks to deterministic encoding, if encoded
-      > *entropy* source issued by the *initiator* is the same as the encoded
-      > *payload* issued by the *recipient*, one can deduce they share the same
-      > *low SPD*
-  - Then, the *recipient* decodes the received encoded *entropy* and get some
-    *payload*
-  - Then, the *recipient* deterministically encodes this *payload* using its
-    *low SPD* and the received *seed*
-    - > [!NOTE]
-      > If the *recipient*'s *low SPD* is different from the *initiator*'s one
-      > (highly likely), the is no security loss consequences regarding the
-      > deterministic encoding that is used only once.
-  - Then, the *recipient* sends this encoded *payload* to the *initiator*
-  - Eventually, the *initiator* receives this encoded *payload*
-  - Below are all information the *initiator* has:
-    - encoded *entropy* source
-    - *initiator*'s *low SPD*
-    - encoded *payload*
-    - the knowledge the *entropy* source and the *recipient*'s *payload* have been
-      deterministically encoded using the *initiator*'s provided *seed*
-  - Then, the *initiator* build a *common alphabet*, that is, addresses values
-    and positions that are shared by bot the *initiator* and the *recipient*.
-    - As the *entropy* source is big related to the *low SPD* there is a
-      substantial chance there are common addresses in the same position in both
-      the encoded *entropy* source issued by the *initiator* and the encoded
-      *payload* issued by the *recipient*
-      - This fundamental property is key to build a *common alphabet* between the
-        *initiator* and the *recipient*
-        - > [!NOTE]
-          > I have the intuition I could formalize the thing using the
-          > *Pigeon-Hole Principle*, I could use some help to build it. I've also
-          > the intuition it could help me to create an *entropy* source having
-          > an optimal size regarding the size of the *common alphabet* I need.
-          > Talking about this *common alphabet*, it needs to be sufficiently
-          > large to encode a 64-bits sized integer
-  - Then, the *initiator* compute a 64-bits sized *seed* (not related to the
-    *seed* mentioned earlier)
-  - Then, the *initiator* encodes this *seed* using the *common alphabet*
-    (degraded *low SPD* somehow)
-    - > [!NOTE]
-      > Determistic encoding introduces security holes if used more than once
-      > with the same known *seed*, for sure. But using this kind of *degraded low
-      > SPD* to encode a data that small as a 64-bits sized *seed* is a concern
-      > too. That being said, it is used only once and, even in a network
-      > presenting adversarial behavior, an attacker could not establish any
-      > correlation between the encoded seed and the actual seed value. The best
-      > it could do is randomly guessing. I have the intuition it is *information
-      > theoritically secured*. I could use some help to confirm. As a
-      > mitigation measure, it may be possible to encode the *seed* several times
-      > in a row to further enhance the entropy of the transferred payload
-  - Then, the *initiator* generates a new *low SPD* deterministically using
-    this new *seed*
-    - > [!NOTE]
-      > On deterministic *SPD* generation:
-      > Unless for public usage such as the future seeded hashing algorithm, it
-      > is discouraged to use such a *SPD* more than once for secrets encoding.
-      > Indeed, a deterministically generated *SPD* is as strong as the
-      > underlying *seed* used to generate it (here 64-bits sized integer, way
-      > less than 128-bytes sized or 64kb-sized *SPD*). Using such a *SPD* only
-      > once though is OK.
-  - Then, the *initiator* sends this encoded seed to the *recipient*
-  - Eventually, the *recipient* receives the encoded *seed*
-    - Thanks to the *common alphabet* (degraded *low SPD*), both the
-      *initiator* and the *recipient* and only them can decode the encoded *seed*
-      to the same value.
-  - Then, the *recipient* can generate the same *low SPD* as the *initiator* as
-    they share the same *seed*
-  - Then, the *initiator* generates a new *high SPD* (no correlation with the
-    *entropy* source)
-  - Then, the *initiator* encodes this new *high SPD* (non-deterministically
-    this time) using the deterministically generated *low SPD*
-  - Then, the *initiator* sends this encoded *high SPD* to the *recipient*
-  - The recipient eventually receives the encoded *high SPD*
-  - The *recipient* decodes it using the deterministically generated *low SPD*,
-    and obtains the very same *high SPD* (same *low SPD* used for both encoding
-    and decoding)
-  - Finally, *initiator* and *recipient* can use *SPDIT*
+##### High level exchanger state
+
+1. Initiate the exchange: The *initiator* initiates an exchange with the
+   *recipient*
+2. Accept the exchange: The *recipient* accept the exchange from the
+   *initiator*
+3. Finalize the exchange: The *initiator* finalizes the exchange with the
+   *recipient*
+
+##### Initiate the exchange
+
+The *initiator* executes the following steps:
+
+1. setup a secret *low SPD*
+2. builds an *entropy* source and a compute a *seed*
+3. encodes the *entropy* source deterministically with the setup *low SPD*
+   using the *seed*
+4. sends both the encoded *entropy* source and the *seed* to the *recipient*
+
+Pre-conditions:
+
+- None
+
+Post-conditions:
+
+- An encoded *entropy* source and a *seed* are sent to the *recipient*
+- created *low SPD* is kept secret
+
+##### Accept the exchange
+
+The *recipient* executes the following steps:
+
+1. The *recipient* setup a secret *low SPD*
+2. The *recipient* decodes the received encoded *entropy* source with the setup
+   *low SPD* creating a *payload*
+3. The *recipient* encodes the *payload* deterministically with the setup *low
+   SPD* using the received *seed*
+4. The *recipient* sends the encoded *payload* to the *initiator*
+
+Pre-conditions:
+
+- A *seed* is received
+- An encoded *entropy* source is received
+
+Post-conditions:
+
+- The encoded *payload* sent to the *initiator*
+- Both the created *low SPD* and the *payload* are kept secret
+
+##### Finalize the exchange
+
+The *initiator* executes the following steps:
+
+1. The *initiator* compares byte to byte the encoded *entropy* source he
+   created and the encoded *payload* he received to build a *common alphabet*
+2. The *initiator* computes a new *seed*
+3. The *initiator* creates a one-time use *low SPD* deterministically using the
+   new *seed*
+4. The *initiator* encodes the new *seed* with the *common alphabet*
+5. The *initiator* encodes the *high SPD* with the one-time use *low SPD*
+6. The *initiator* sends both the encoded *high SPD* and the encoded new *seed*
+   to the *recipient*
+7. discard all the data involved in the exchange but the last generated *high
+   SPD*
+
+Pre-conditions:
+
+- An encoded *payload* is received
+- The encoded *entropy* source is available
+- The computed *common alphabet* is sufficiently large to scramble the *seed*
+  value upon encoding
+
+Post-conditions:
+
+- An encoded *seed* is created with the help of the *common alphabet*
+- A *low SPD* is deterministically created using the *seed*
+- A *high SPD* is created
+- An encoded *high SPD* is created from the *high SPD* using the created
+  one-time use *low SPD*
+- The encoded *high SPD* and the encoded *seed* are sent to the *recipient*
+- The *seed*, the *high SPD* and the *low SPD* are kept secret
+
+##### Post-finalization step
+
+The *recipient* executes the following steps:
+
+1. receives the encoded *high SPD* and an encoded *seed*
+2. decodes the encoded *seed* with its own *low SPD* that is a superset of the
+   *common alphabet*
+3. creates the very same one-time use *low SPD* the *initiator* created using
+   the decoded *seed*
+4. decodes the encoded *high SPD* with the one-time use *low SPD*
+5. discard all data involved in the *exchange* but the last decoded *high SPD*
+
+Pre-conditions:
+
+- The *recipient*'s secret *low SPD* is available
+- The encoded *seed* and the encoded *high SPD* are received
+
+Post-conditions:
+
+- The *initiator* and the *recipient* share the same *high SPD*
+- The aforementioned *high SPD* is kept secret
+
+##### Entropy source details
+
+- generated by the *initiator*
+- encoded using a *low SPD*
+- must be order of magnitude larger than the *low SPD* ,that's why a *high SPD*
+  is a valid candidate
+- The encoded *high SPD* is very large (128kb) is highly likely not to be
+  suitable in real *exchange* protocol implementation
+- A potential replacement that is still *ITS* would involve the creation of a
+  new type of *SPD* that is one order of magnitude smaller than the *low SPD*
+  - Could be named *null SPD* and specifically designed to be one-time used and
+    space efficient for secret *seed* transfers
+
+##### Note on deterministic encoding
+
+- Can have catastrophic consequences on *SPDIT* security if:
+  - The *seed* to perform it is revealed
+  - used more than one time with the same *SPD*
+- Safe otherwise
+
+##### Note on encoded data transfers
+
+- Following data are transferred on a network where adversarial behavior is
+  considered the norm:
+  - encoded *entropy* source (exchange initiate)
+  - clear *seed* value (exchange initiate)
+  - encoded *payload* (exchange accepted)
+  - encoded *seed* (exchange finalized)
+  - encoded *high SPD*  (exchange finalized)
+- Without anything else (information kept secret by both the *initiator* and
+  the *recipient* or discarded by them), it is impossible for an attacker to
+  deterministically reconstruct the final *high SPD* both the *initiator* and the
+  *recipient* will share once the *exchange* is done.
+
+##### Note on the common alphabet
+
+- In essence, it is a probabilistic approach
+- It is a set of *addresses* in a *low SPD*
+- In fact, a piece of a *low SPD*
+- encoded *entropy* source and *encoded* payload use the same *alphabet* as the
+  encoding system (*low SPD*)
+- Those encoded data are order of magnitude bigger than the *low SPD* they
+  share the alphabet with
+- Then, there are substantial probability values *AND* position of those values
+  are shared both in encoded *entropy* source and encoded *payload* thanks to
+  deterministic encoding (this is *THE TRICK*)
+- A sufficiently large *common alphabet*, though relatively small compared to a
+  full *low SPD* is sufficiently secured to encode (one time or more in a row) a
+  small value like a *seed* if used **only once**
+
+  ##### Note on deterministic SPD generation
+
+- Discouraged unless for:
+  - publicly accessible *SPD* for future seeded universal ITS hashing I'll be
+    working on later
+- Such a *SPD* is as strong as the underlying *seed* used to generate it
+- Such a *SPD* remains secure if used only once (as it is the case in this
+  *exchange* protocol)
 
 ## Seeded / Universal / Information theoritically secured hashing
 

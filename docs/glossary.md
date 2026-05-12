@@ -34,6 +34,7 @@
 - **information theoretically secured** aka. unconditional security, is a
   system that is secured even in presence of adversarial behavior having
   unlimited computing resource and time. *SPDIT* plays in this category.
+- **ITS** is an acronym for *information theoretically secured*
 - **hashing** function are able to map data of arbitrary size to a fixed-size
   value. A good *hashing* function must have mandatory properties such as
   minimizing duplication of output values, producing output values uniformly
