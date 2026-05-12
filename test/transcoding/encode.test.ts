@@ -1,6 +1,5 @@
-import { SPD } from "src/SPD";
 import { SplitMix64 } from "src/stochastic";
-import { Transcoder } from "src/transcoding";
+import { SPD, Transcoder } from "src/transcoding";
 
 import { describe, expect, it } from "bun:test";
 

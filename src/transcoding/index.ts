@@ -1,5 +1,4 @@
+import { SPD } from "./SPD";
 import { Transcoder } from "./transcoder";
 
-export {
-  Transcoder
-}
+export { SPD, Transcoder };

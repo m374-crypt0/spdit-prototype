@@ -1,4 +1,4 @@
-import { SPD } from "src/SPD";
+import { SPD } from "src/transcoding";
 import { SplitMix64, UniformUint64, Xoroshiro128Plus } from "src/stochastic";
 import { UniformUint64DistributionEngine } from "src/stochastic/distributionEngines";
 

@@ -1,5 +1,5 @@
-import { Exchanger, Initiator, Recipient, SPD } from "src/SPD";
-import { Transcoder } from "src/transcoding";
+import { Exchanger, Initiator, Recipient } from "src/exchange";
+import { Transcoder, SPD } from "src/transcoding";
 
 import { beforeEach, describe, expect, it, spyOn } from "bun:test";
 

@@ -1,5 +1,5 @@
-import { Initiator, Recipient, SPD } from "src/SPD"
-import { Transcoder } from "src/transcoding"
+import { Initiator, Recipient } from "src/exchange"
+import { Transcoder, SPD } from "src/transcoding"
 
 import { describe, expect, it } from "bun:test"
 

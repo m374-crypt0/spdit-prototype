@@ -1,6 +1,6 @@
 import { SplitMix64 } from "src/stochastic"
 import { Transcoder } from "src/transcoding"
-import { SPD } from "../create"
+import { SPD } from "../transcoding/SPD"
 
 abstract class Peer {
   constructor(identifier: string, transcoder?: Transcoder) {

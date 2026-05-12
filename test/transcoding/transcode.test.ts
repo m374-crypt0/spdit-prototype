@@ -1,7 +1,6 @@
-import { Transcoder } from "src/transcoding";
+import { SPD, Transcoder } from "src/transcoding";
 
-import { describe, expect, it, xit } from "bun:test";
-import { SPD } from "src/SPD";
+import { describe, expect, it } from "bun:test";
 
 describe('transcoding test suite', () => {
   describe('high SPD transcoding', () => {

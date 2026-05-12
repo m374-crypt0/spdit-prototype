@@ -1,4 +1,4 @@
-import type { Initiator, Recipient } from "./"
+import type { Initiator, Recipient } from "."
 
 export class Exchanger {
   constructor(options: Options) {

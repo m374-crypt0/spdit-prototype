@@ -1,4 +1,4 @@
-import { SPD } from "src/SPD";
+import { SPD } from "src/transcoding";
 
 import { describe, expect, it } from "bun:test";
 
