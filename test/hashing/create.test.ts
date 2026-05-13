@@ -1,6 +1,7 @@
 import { Shi7 } from "src/hashing";
 
 import { describe, expect, it } from "bun:test";
+import { SPD } from "src/transcoding";
 
 describe('hashing test suite', () => {
   describe('hashing function instantiation', () => {
@@ -38,6 +39,12 @@ describe('hashing test suite', () => {
 
     it('should report the hash size if asked for', () => {
       expect(new Shi7({ hashBitSize: 64 }).hashBitSize()).toBe(64)
+    })
+
+    it('should be possible to access an underlying high SPD on demand when instantiated', () => {
+      const shi7 = new Shi7
+
+      expect(shi7.spd().laneSize).toBe(SPD.HIGH_LANE_SIZE)
     })
   })
 

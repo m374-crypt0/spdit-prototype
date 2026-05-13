@@ -1,4 +1,5 @@
 import { SplitMix64 } from "src/stochastic"
+import { SPD } from "src/transcoding"
 
 export class Shi7 {
   constructor(options?: Options) {
@@ -21,8 +22,15 @@ export class Shi7 {
     return this.hashBitSize_
   }
 
+  spd(): Readonly<SPD> {
+    this.spd_ = this.spd_ ?? new SPD('high', { kind: 'seed', seed: this.seed_ })
+
+    return this.spd_
+  }
+
   private seed_?: bigint
   private hashBitSize_?: number
+  private spd_?: SPD
 }
 
 type Options = {
