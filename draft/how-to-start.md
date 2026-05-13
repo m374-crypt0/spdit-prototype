@@ -14,7 +14,40 @@ There are 2 topics that are of utmost importance so far:
 1. seeded hashing
 2. *SPD* peer-to-peer exchange
 
-## *SPD* peer-to-peer exchange
+## Seeded hashing experiment
+
+An idea I had reversing the point of view of *transcoding*: if a *message* is a
+bunch of data to be hashed, one could see a *message* as an encoded data
+against a specific *high SPD*.
+Basically, in order to guarantee the same output for a specific *message*
+hashing, the used *high SPD* needs to be deterministically generated.
+
+Specific corner cases must be carefully studied such as:
+
+- empty *message* hashing
+- *message*'s size being smaller than *hash* size
+- *message*'s size not being a multiplier of *hash size* times dimensional
+  factor (2 in this prototype)
+
+Critical constraints must also be fulfilled such as be not restricted to:
+
+- collision resistance
+- pre-image attacks resistance
+- performant
+
+Below are case studies helping to design a test harness and benchmark to assess
+correctness, performance and constraints respect.
+Each case study rely on a deterministically generated *high SPD*
+
+### Hash case study: creating the seeded SPD
+
+### Hash case study: empty *message* hashing
+
+### Hash case study: small input
+
+### Hash case study: big input
+
+## *SPD* peer-to-peer exchange (postponed after hashing)
 
 This one make me loose some hair... Actively working on, I'll start by this one.
 I've some ideas I need to test, demonstrate, and make understandable.
@@ -269,8 +302,3 @@ Post-conditions:
 - Such a *SPD* is as strong as the underlying *seed* used to generate it
 - Such a *SPD* remains secure if used only once (as it is the case in this
   *exchange* protocol)
-
-## Seeded / Universal / Information theoritically secured hashing
-
-I've built a clear mental model about this one, I do not plan anymore
-difficulty so I will work on that later on.

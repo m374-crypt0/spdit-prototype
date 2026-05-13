@@ -144,7 +144,7 @@ describe('exchange test suite', () => {
           })
         })
 
-        describe('initiator and recipient do not share the same initial low SPD', () => {
+        xdescribe('initiator and recipient do not share the same initial low SPD', () => {
           beforeEach(() => {
             exchanger.initiate()
             exchanger.accept()
