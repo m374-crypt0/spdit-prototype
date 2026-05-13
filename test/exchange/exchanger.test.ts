@@ -113,7 +113,7 @@ describe('exchange test suite', () => {
         })
       })
 
-      describe('from finalized', () => {
+      describe.only('from finalized', () => {
         describe('initiator and recipient share the same initial low SPD', () => {
           const lowSPD = new SPD('low')
 
@@ -144,7 +144,7 @@ describe('exchange test suite', () => {
           })
         })
 
-        xdescribe('initiator and recipient do not share the same initial low SPD', () => {
+        describe('initiator and recipient do not share the same initial low SPD', () => {
           beforeEach(() => {
             exchanger.initiate()
             exchanger.accept()

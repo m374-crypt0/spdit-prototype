@@ -1,7 +1,6 @@
 import { SplitMix64, UniformUint64 } from "src/stochastic"
 import { Transcoder } from "src/transcoding"
 import { SPD } from "../transcoding/SPD"
-import { Terminal } from "bun"
 
 abstract class Peer {
   constructor(identifier: string, transcoder?: Transcoder) {
