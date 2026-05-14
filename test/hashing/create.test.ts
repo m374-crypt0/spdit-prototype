@@ -22,15 +22,15 @@ describe('hashing test suite', () => {
       expect(new Shi7().hashBitSize()).toBe(256)
     })
 
-    it('should throw if specifying hash bit size under 64 bits or above 1024 bits', () => {
-      expect(() => new Shi7({ hashBitSize: 63 })).toThrowError('invalid hash bit size')
-      expect(() => new Shi7({ hashBitSize: 1025 })).toThrowError('invalid hash bit size')
-    })
+    it.each([63, 1025])
+      ('should throw if specifying hash bit size under 64 bits or above 1024 bits', hashBitSize => {
+        expect(() => new Shi7({ hashBitSize })).toThrowError('invalid hash bit size')
+      })
 
-    it('should throw if specified hash bit size is not a power of 2', () => {
-      expect(() => new Shi7({ hashBitSize: 65 })).toThrowError('invalid hash bit size')
-      expect(() => new Shi7({ hashBitSize: 1023 })).toThrowError('invalid hash bit size')
-    })
+    it.each([65, 1023])
+      ('should throw if specified hash bit size is not a power of 2', hashBitSize => {
+        expect(() => new Shi7({ hashBitSize })).toThrowError('invalid hash bit size')
+      })
 
     it.each([64, 128, 256, 512, 1024])
       ('should accept any hash bit size that is a power of 2 between 64 and 1024 included', (hashBitSize) => {
@@ -41,7 +41,6 @@ describe('hashing test suite', () => {
       expect(new Shi7({ hashBitSize: 64 }).hashBitSize()).toBe(64)
     })
 
-    // FIXME: tell don't ask violation
     it('should be possible to access an underlying high SPD on demand when instantiated', () => {
       const shi7 = new Shi7
 
@@ -50,18 +49,14 @@ describe('hashing test suite', () => {
   })
 
   describe('empty message hashing', () => {
-    // TODO: fuzzing here, before mathematical proof
-    it.each([
-      { seed: 42n, hashBitSize: 64 },
-      { seed: 1337n, hashBitSize: 256 }
-    ])
-      ('should give a well sized value for empty message hash, always the same given a seed', ({ seed, hashBitSize }) => {
+    it.each([64, 128, 256, 512, 1024])
+      ('should give a well sized value for empty message hash, always the same given a seed', (hashBitSize) => {
         const emptyMessage = Buffer.from(new ArrayBuffer(0))
 
-        const hasher = new Shi7({ seed, hashBitSize })
+        const hasher = new Shi7({ hashBitSize })
         const expectedHash = hasher.hash(emptyMessage)
 
-        const unrelatedHasher = new Shi7
+        const unrelatedHasher = new Shi7({ hashBitSize })
         const unrelatedHash = unrelatedHasher.hash(emptyMessage)
 
         expect(expectedHash).toBeLessThanOrEqual(hasher.maxHashValue())
@@ -76,21 +71,16 @@ describe('hashing test suite', () => {
 
   describe('special cases', () => {
     describe('pre-image attacks resistance', () => {
-      it('should not match hash of empty message and underlying SPD', () => {
-        const hasher = new Shi7
-        const emptyMessage = Buffer.from(new ArrayBuffer(0))
+      it.each([64, 128, 256, 512, 1024])
+        ('should not match hash of empty message and underlying SPD', hashBitSize => {
+          const hasher = new Shi7({ hashBitSize })
+          const emptyMessage = Buffer.from(new ArrayBuffer(0))
 
-        expect(hasher.hash(emptyMessage)).not.toBe(hasher.hash(hasher.spd().readonlyBufferView()))
-      })
+          expect(hasher.hash(emptyMessage)).not.toBe(hasher.hash(hasher.spd().readonlyBufferView()))
+        })
 
-      it.each([
-        { hashBitSize: 64 },
-        { hashBitSize: 128 },
-        { hashBitSize: 256 },
-        { hashBitSize: 512 },
-        { hashBitSize: 1_024 },
-      ])
-        ('should give valid hash value for message of hashBitSize size', ({ hashBitSize }) => {
+      it.each([64, 128, 256, 512, 1024])
+        ('should not give the message value as is for message of hashBitSize size', (hashBitSize) => {
           const hasher = new Shi7({ hashBitSize })
           const message = Buffer.from(Array.from({ length: hashBitSize / 8 }, (_, i) => i))
           const messageAsBigInt = BigInt(`0x${message.toHex()}`)
@@ -102,23 +92,20 @@ describe('hashing test suite', () => {
     })
 
     describe('avalanche effect', () => {
-      it('should have good diffusion properties', () => { })
+      it.each([64, 128, 256, 512, 1024])
+        ('should have good diffusion properties', () => { })
     })
   })
 
   describe('power of 2 and bigger than hashBitSize message', () => {
-    // TODO: fuzzing here, before mathematical proof
-    it.each([
-      { seed: 42n, hashBitSize: 64 },
-      { seed: 1337n, hashBitSize: 256 }
-    ])
-      ('should give a well sized value for message hash, always the same given a seed', ({ seed, hashBitSize }) => {
+    it.each([64, 128, 256, 512, 1024])
+      ('should give a well sized value for message hash, always the same given a seed', (hashBitSize) => {
         const message = Buffer.from(Array.from({ length: hashBitSize / 8 * 2 }, () => 0))
 
-        const hasher = new Shi7({ seed, hashBitSize })
+        const hasher = new Shi7({ hashBitSize })
         const expectedHash = hasher.hash(message)
 
-        const unrelatedHasher = new Shi7
+        const unrelatedHasher = new Shi7({ hashBitSize })
         const unrelatedHash = unrelatedHasher.hash(message)
 
         expect(expectedHash).toBeLessThanOrEqual(hasher.maxHashValue())
