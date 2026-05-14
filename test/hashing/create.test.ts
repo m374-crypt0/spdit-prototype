@@ -22,7 +22,7 @@ describe('hashing test suite', () => {
       expect(new Shi7().hashBitSize()).toBe(256)
     })
 
-    it.each([63, 1025])
+    it.each([-1, 0, 63, 1025])
       ('should throw if specifying hash bit size under 64 bits or above 1024 bits', hashBitSize => {
         expect(() => new Shi7({ hashBitSize })).toThrowError('invalid hash bit size')
       })
@@ -69,7 +69,7 @@ describe('hashing test suite', () => {
       })
   })
 
-  describe('special cases', () => {
+  describe('invariant properties of a hash function', () => {
     describe('pre-image attacks resistance', () => {
       it.each([64, 128, 256, 512, 1024])
         ('should not match hash of empty message and underlying SPD', hashBitSize => {

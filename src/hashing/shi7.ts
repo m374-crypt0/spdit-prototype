@@ -3,15 +3,16 @@ import { SPD, Transcoder } from "src/transcoding"
 
 export class Shi7 {
   constructor(options?: Options) {
-    if (options?.hashBitSize) {
+    if (options?.hashBitSize !== undefined) {
       const hbs = options.hashBitSize
 
       if (hbs < 64 || hbs > 1024 || ((hbs & (hbs - 1)) !== 0))
         throw new Error('invalid hash bit size')
+
+      this.hashBitSize_ = hbs
     }
 
-    this.seed_ = new SplitMix64(options?.seed).state()
-    this.hashBitSize_ = options?.hashBitSize ?? 256
+    this.seed_ = options?.seed ?? new SplitMix64().state()
   }
 
   seed() {
@@ -35,12 +36,13 @@ export class Shi7 {
 
   hash(message: Readonly<Buffer<ArrayBuffer>>): bigint {
     if (message.byteLength === 0)
-      // NOTE: pre-image attack resistance
+      // NOTE: pre-image attack resistance by subtracting 1n
       return BigInt.asUintN(this.hashBitSize(), this.hash(this.spd().readonlyBufferView()) - 1n)
 
     const t = new Transcoder({ highSPD: this.spd() })
 
     if (message.byteLength <= this.hashBitSize() / 8) {
+      // NOTE: pre-image attack resistance by subtracting 1n
       return BigInt(`0x${message.toHex()}`) - 1n
     }
 
@@ -48,7 +50,7 @@ export class Shi7 {
   }
 
   private seed_: bigint
-  private hashBitSize_: number
+  private hashBitSize_: number = 256
   private spd_?: SPD
 }
 
