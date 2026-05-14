@@ -33,22 +33,17 @@ export class Shi7 {
     return (1n << BigInt(this.hashBitSize())) - 1n
   }
 
-  hash(message: Readonly<Buffer<ArrayBuffer>>) {
+  hash(message: Readonly<Buffer<ArrayBuffer>>): bigint {
     if (message.byteLength === 0)
-      return BigInt(`0x${this.emptyHash()?.toHex()}`)
+      return BigInt.asUintN(this.hashBitSize(), this.hash(this.spd().readonlyBufferView()) - 1n)
 
-    return 0n
-  }
-
-  private emptyHash(message?: Buffer<ArrayBuffer>): Readonly<Buffer<ArrayBuffer>> {
     const t = new Transcoder({ highSPD: this.spd() })
 
-    message = message ?? this.spd().readonlyBufferView()
+    if (message.byteLength <= this.hashBitSize() / 8) {
+      return BigInt(`0x${message.toHex()}`)
+    }
 
-    if (message.byteLength === this.hashBitSize() / 8)
-      return message
-
-    return this.emptyHash(t.decode(message))
+    return this.hash(t.decode(message))
   }
 
   private seed_: bigint

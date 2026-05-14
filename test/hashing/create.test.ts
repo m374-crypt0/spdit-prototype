@@ -1,6 +1,6 @@
 import { Shi7 } from "src/hashing";
 
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, xit } from "bun:test";
 import { SPD } from "src/transcoding";
 
 describe('hashing test suite', () => {
@@ -69,6 +69,40 @@ describe('hashing test suite', () => {
 
         expect(unrelatedHash).toBeLessThanOrEqual(unrelatedHasher.maxHashValue())
         expect(unrelatedHasher.hash(emptyMessage)).toBe(unrelatedHash)
+
+        expect(unrelatedHash).not.toBe(expectedHash)
+      })
+  })
+
+  describe('special cases', () => {
+    it('should not match hash of empty message and underlying SPD', () => {
+      const hasher = new Shi7
+      const emptyMessage = Buffer.from(new ArrayBuffer(0))
+
+      expect(hasher.hash(emptyMessage)).not.toBe(hasher.hash(hasher.spd().readonlyBufferView()))
+    })
+  })
+
+  describe('power of 2 and bigger than hashBitSize message', () => {
+    // TODO: fuzzing here, before mathematical proof
+    it.each([
+      { seed: 42n, hashBitSize: 64 },
+      { seed: 1337n, hashBitSize: 256 }
+    ])
+      ('should give a well sized value for message hash, always the same given a seed', ({ seed, hashBitSize }) => {
+        const message = Buffer.from(Array.from({ length: hashBitSize / 8 * 2 }, () => 0))
+
+        const hasher = new Shi7({ seed, hashBitSize })
+        const expectedHash = hasher.hash(message)
+
+        const unrelatedHasher = new Shi7
+        const unrelatedHash = unrelatedHasher.hash(message)
+
+        expect(expectedHash).toBeLessThanOrEqual(hasher.maxHashValue())
+        expect(hasher.hash(message)).toBe(expectedHash)
+
+        expect(unrelatedHash).toBeLessThanOrEqual(unrelatedHasher.maxHashValue())
+        expect(unrelatedHasher.hash(message)).toBe(unrelatedHash)
 
         expect(unrelatedHash).not.toBe(expectedHash)
       })
