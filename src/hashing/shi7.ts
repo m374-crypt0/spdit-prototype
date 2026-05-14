@@ -35,12 +35,13 @@ export class Shi7 {
 
   hash(message: Readonly<Buffer<ArrayBuffer>>): bigint {
     if (message.byteLength === 0)
+      // NOTE: pre-image attack resistance
       return BigInt.asUintN(this.hashBitSize(), this.hash(this.spd().readonlyBufferView()) - 1n)
 
     const t = new Transcoder({ highSPD: this.spd() })
 
     if (message.byteLength <= this.hashBitSize() / 8) {
-      return BigInt(`0x${message.toHex()}`)
+      return BigInt(`0x${message.toHex()}`) - 1n
     }
 
     return this.hash(t.decode(message))

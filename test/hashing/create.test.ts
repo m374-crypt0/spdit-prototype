@@ -75,11 +75,34 @@ describe('hashing test suite', () => {
   })
 
   describe('special cases', () => {
-    it('should not match hash of empty message and underlying SPD', () => {
-      const hasher = new Shi7
-      const emptyMessage = Buffer.from(new ArrayBuffer(0))
+    describe('pre-image attacks resistance', () => {
+      it('should not match hash of empty message and underlying SPD', () => {
+        const hasher = new Shi7
+        const emptyMessage = Buffer.from(new ArrayBuffer(0))
 
-      expect(hasher.hash(emptyMessage)).not.toBe(hasher.hash(hasher.spd().readonlyBufferView()))
+        expect(hasher.hash(emptyMessage)).not.toBe(hasher.hash(hasher.spd().readonlyBufferView()))
+      })
+
+      it.each([
+        { hashBitSize: 64 },
+        { hashBitSize: 128 },
+        { hashBitSize: 256 },
+        { hashBitSize: 512 },
+        { hashBitSize: 1_024 },
+      ])
+        ('should give valid hash value for message of hashBitSize size', ({ hashBitSize }) => {
+          const hasher = new Shi7({ hashBitSize })
+          const message = Buffer.from(Array.from({ length: hashBitSize / 8 }, (_, i) => i))
+          const messageAsBigInt = BigInt(`0x${message.toHex()}`)
+
+          const hash = hasher.hash(message)
+
+          expect(messageAsBigInt).not.toBe(hash)
+        })
+    })
+
+    describe('avalanche effect', () => {
+      it('should have good diffusion properties', () => { })
     })
   })
 
@@ -108,3 +131,11 @@ describe('hashing test suite', () => {
       })
   })
 })
+
+function reportHammingDistanceBetween(a: bigint, b: bigint) {
+  const [_, max] = a < b ? [a, b] : [b, a]
+  let bitCount = 0; for (let x = max; x > 0n; x >>= 1n, bitCount++);
+  let distance = 0; for (let xor = a ^ b; xor > 0n; xor &= xor - 1n, distance++);
+
+  return distance / bitCount
+}

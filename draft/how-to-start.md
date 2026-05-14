@@ -33,6 +33,7 @@ Critical constraints must also be fulfilled such as be not restricted to:
 
 - collision resistance
 - pre-image attacks resistance
+- cascading effect even for tiny changes in the message
 - performant
 
 Below are case studies helping to design a test harness and benchmark to assess
