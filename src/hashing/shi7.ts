@@ -1,5 +1,5 @@
 import { SplitMix64 } from "src/stochastic"
-import { SPD } from "src/transcoding"
+import { SPD, Transcoder } from "src/transcoding"
 
 export class Shi7 {
   constructor(options?: Options) {
@@ -22,14 +22,37 @@ export class Shi7 {
     return this.hashBitSize_
   }
 
+  // FIXME: tell don't ask violation (see in test)
   spd(): Readonly<SPD> {
     this.spd_ = this.spd_ ?? new SPD('high', { kind: 'seed', seed: this.seed_ })
 
     return this.spd_
   }
 
-  private seed_?: bigint
-  private hashBitSize_?: number
+  maxHashValue() {
+    return (1n << BigInt(this.hashBitSize())) - 1n
+  }
+
+  hash(message: Readonly<Buffer<ArrayBuffer>>) {
+    if (message.byteLength === 0)
+      return BigInt(`0x${this.emptyHash()?.toHex()}`)
+
+    return 0n
+  }
+
+  private emptyHash(message?: Buffer<ArrayBuffer>): Readonly<Buffer<ArrayBuffer>> {
+    const t = new Transcoder({ highSPD: this.spd() })
+
+    message = message ?? this.spd().readonlyBufferView()
+
+    if (message.byteLength === this.hashBitSize() / 8)
+      return message
+
+    return this.emptyHash(t.decode(message))
+  }
+
+  private seed_: bigint
+  private hashBitSize_: number
   private spd_?: SPD
 }
 

@@ -41,6 +41,7 @@ describe('hashing test suite', () => {
       expect(new Shi7({ hashBitSize: 64 }).hashBitSize()).toBe(64)
     })
 
+    // FIXME: tell don't ask violation
     it('should be possible to access an underlying high SPD on demand when instantiated', () => {
       const shi7 = new Shi7
 
@@ -48,5 +49,28 @@ describe('hashing test suite', () => {
     })
   })
 
-  describe('empty message hashing', () => { })
+  describe('empty message hashing', () => {
+    // TODO: fuzzing here, before mathematical proof
+    it.each([
+      { seed: 42n, hashBitSize: 64 },
+      { seed: 1337n, hashBitSize: 256 }
+    ])
+      ('should give a well sized value for empty message hash, always the same given a seed', ({ seed, hashBitSize }) => {
+        const emptyMessage = Buffer.from(new ArrayBuffer(0))
+
+        const hasher = new Shi7({ seed, hashBitSize })
+        const expectedHash = hasher.hash(emptyMessage)
+
+        const unrelatedHasher = new Shi7
+        const unrelatedHash = unrelatedHasher.hash(emptyMessage)
+
+        expect(expectedHash).toBeLessThanOrEqual(hasher.maxHashValue())
+        expect(hasher.hash(emptyMessage)).toBe(expectedHash)
+
+        expect(unrelatedHash).toBeLessThanOrEqual(unrelatedHasher.maxHashValue())
+        expect(unrelatedHasher.hash(emptyMessage)).toBe(unrelatedHash)
+
+        expect(unrelatedHash).not.toBe(expectedHash)
+      })
+  })
 })
