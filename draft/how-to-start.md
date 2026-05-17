@@ -26,8 +26,7 @@ Specific corner cases must be carefully studied such as:
 
 - empty *message* hashing
 - *message*'s size being smaller than *hash* size
-- *message*'s size not being a multiplier of *hash size* times dimensional
-  factor (2 in this prototype)
+- *message*'s size not being even
 
 Critical constraints must also be fulfilled such as be not restricted to:
 
@@ -40,13 +39,113 @@ Below are case studies helping to design a test harness and benchmark to assess
 correctness, performance and constraints respect.
 Each case study rely on a deterministically generated *high SPD*
 
-### Hash case study: creating the seeded SPD
+### General approach for the hashing algorithm
+
+- Main idea: decode the message using a deterministically generated *high SPD*
+- this general approach only consider message size that perfectly fits to get a
+  correctly sized hash value. Specific cases will be described later on.
+- let `M` be a message to hash.
+- let `H` being the hash of `M`
+- let `hbs` the *hash bit size* (power of 2, ranging from 64 to 1024)
+- let `M`'s size be a multiple of `hbs` (other cases will be treated later on)
+
+Below is the general approach:
+
+1. repeatedly decode `M` up to `M'` until `M'`'s size is `hbs * 2`.
+   There is an obvious collision issue here. Hashing `M` gives the same result
+   as hashing *decoded* `M`. Due to the stochastic nature of a *high SPD*, it
+   **SHOULD NOT** be a problem as there is no relation between `M` and *decoded*
+   `M`
+1. repeatedly decode `M'` to create `S` using the same algorithm until `S`'s
+   size is 64 bits
+1. shuffle `M'` deterministically at byte level using `S` as a *seed* creating
+   `M''`
+1. decode `M''` to get `H`
+
+- `M` to `M'` leverages uses the *high SPD* content to somehow compress `M` to
+  `M'`. This compression is lossy thus, no information could be extracted from
+  `M'` to get information about `M`
+- Obtaining the seed `S` from `M'` allow the final step of hashing to also
+  depend on `M` and not only on the *high SPD* content and the *hasher*'s *seed*
+- Shuffling `M'` at byte level breaks the address scheme of decoding and has
+  the effect to ensure a good diffusion of resulting hash value even if two
+  messages differ by a few
+
+### Brief talk on odd sized messages
+
+In this *SPDIT prototype*, *transcoding* relies on a dimensional factor of 2.
+More simply, *encoding* takes one byte to give 2 bytes and *decoding* takes the
+other way around
+Thus, odd-sized messages must be treated accordingly because without
+modification they cannot be fully transcoded.
+One way to do so is by simply appending one byte at the end of the message but
+it could create a collision with another message that would be the same.
+Same thing if I choose to remove one byte.
+*A possible solution* could be to keep the oddness as a state that alter the
+hashing algorithm in a way collision do not occur with even-sized message
+having one byte less and transcode the odd-size message ignoring the last byte.
+As a result, no predictable collision occurs regarding the original and the
+truncated message.
+
+### Shi7: the class responsible to expose the hash function
+
+- with a *seed* at construction
+  - The *seed* is a key part to identify a *shi7* instance alongside its *hash
+    bit size*. Must be immutable after initialization.
+  - A default instantiation is possible to. In this case, the *hash bit size*
+    is `256` and the *seed* is selected at random.
+  - However, to make the pseudo random number generation not too predictable,
+    keep track of a specific *splitmix64* instance initially instantiated with the
+    *seed* then, use the next *seed* it could provide each time it is needed
+    **within a hash call**, I mean, do not use the same *seed* to initialize a
+    *splitmix64* instance several time.
+- with a *hash bit size* in `[64, 128, 256, 512, 1024]`
+- prepare for *high SPD* query on-demand, generated using a *seed* for
+  performance reasons
 
 ### Hash case study: empty *message* hashing
 
-### Hash case study: small input
+- constant value, computed on demand then cached for performance purpose
+- based on underlying *high SPD*
+  - must be different of the explicit hash value of the underlying *high SPD*
+    to ensure collision resistance for this case
+  - shuffling may be a good way to diffuse
+- must not influence the behavior of further hashing
 
-### Hash case study: big input
+### Hash case study: small messages in regard of *hash bit size* \*2
+
+- By small, I mean under the *hash bit size* * 2.
+- ranges from 1 byte to *hash bit size* * 8 \* 2 - 1
+- therefore, could be even or odd sized
+- odd sized messages need careful attention
+  - because they need to be padded with one byte
+  - the padding byte must be decorrelated from the message itself
+  - could be randomly generated
+
+For this kind of small message, the first step consists in padding them until
+they reach *hash bit size* * 2 in size:
+
+- compute how many bytes are necessary for the message to reach
+  *hash bit size* 2 in size
+- if byte missing count is greater than or equal to 2
+  - deterministically encode a byte from the message
+- if byte missing count equals to 1 (last step)
+  - generate a random byte to pad
+  - no correlation between padding data and the message itself
+- Then, apply the [general approach](#general-approach-for-the-hashing-algorithm)
+
+### Hash case study: big messages in regard of *hash bit size* \* 2
+
+- By big, I mean above the *hash bit size* \* 2
+- ranging from *hash bit size* * 8 \* 2 to arbitrarily large
+- therefore, could be even or odd sized
+- decodes the message until it reaches a size lesser than or equal to *hash bit
+  size* * 2
+- if size equals *hash bit size* * 2
+  - apply [general approach](#general-approach-for-the-hashing-algorithm)
+- otherwise
+  - pad the result until it reaches *hash bit size* * 2
+  - then apply the [general approach](#general-approach-for-the-hashing-algorithm)
 
 ## *SPD* peer-to-peer exchange (postponed after hashing)
 
