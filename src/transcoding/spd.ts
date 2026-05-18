@@ -109,7 +109,6 @@ export class SPD {
     this.generateLanes()
     this.shuffleLanes(d)
     this.transposeBuffer()
-    this.shuffleLanes(d)
     this.overwriteFewValuesInAllLanes(d)
   }
 
