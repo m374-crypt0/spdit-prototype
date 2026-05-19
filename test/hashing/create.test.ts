@@ -52,12 +52,7 @@ describe('hashing test suite', () => {
 
       beforeAll(() => hashes = new Set<bigint>)
 
-      it.each(([64, 128, 256, 512, 1024] as const)
-        .map(hashBitSize =>
-          Array.from({ length: 10 }, () => new SplitMix64().newSeed())
-            .map(seed => ({ seed, hashBitSize }))
-        )
-        .flat())
+      it.each(shi7OptionsSample(10))
         ('should not collide hash values between different Shi7 instances', ({ seed, hashBitSize }) => {
           hashes.add(new Shi7({ seed, hashBitSize }).hash(empty))
         })
@@ -68,14 +63,9 @@ describe('hashing test suite', () => {
     describe('diffusion properties', () => {
       let hashes: Array<bigint>
 
-      beforeAll(() => hashes = [])
+      beforeAll(() => hashes = new Array<bigint>)
 
-      it.each(([64, 128, 256, 512, 1024] as const)
-        .map(hashBitSize =>
-          Array.from({ length: 10 }, () => new SplitMix64().newSeed())
-            .map(seed => ({ seed, hashBitSize }))
-        )
-        .flat())
+      it.each(shi7OptionsSample(10))
         ('should give pretty different hashes for seeds differing by one bit', ({ seed, hashBitSize }) => {
           hashes.push(new Shi7({ seed, hashBitSize }).hash(empty))
         })
@@ -98,13 +88,7 @@ describe('hashing test suite', () => {
 
       beforeAll(() => diffusionResults = [])
 
-      // TODO: extract a test util to generate Shi7 options
-      it.each(([64, 128, 256, 512, 1024] as const)
-        .map(hashBitSize =>
-          Array.from({ length: 10 }, () => new SplitMix64().newSeed())
-            .map(seed => ({ seed, hashBitSize }))
-        )
-        .flat())
+      it.each(shi7OptionsSample(10))
         ('should differ largely for an empty message hash and the underlying SPD hash', ({ seed, hashBitSize }) => {
           const hasher = new Shi7({ seed, hashBitSize })
 
@@ -136,3 +120,11 @@ describe('hashing test suite', () => {
   })
 })
 
+function shi7OptionsSample(count: number) {
+  return ([64, 128, 256, 512, 1024] as const)
+    .map(hashBitSize =>
+      Array.from({ length: count }, () => new SplitMix64().newSeed())
+        .map(seed => ({ seed, hashBitSize }))
+    )
+    .flat()
+}
