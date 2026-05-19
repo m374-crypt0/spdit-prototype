@@ -55,7 +55,7 @@ Below is the general approach:
    There is an obvious collision issue here. Hashing `M` gives the same result
    as hashing *decoded* `M`. Due to the stochastic nature of a *high SPD*, it
    **SHOULD NOT** be a problem as there is no relation between `M` and *decoded*
-   `M`
+   `M`. However, I **MUST** remove this obvious collision.
 1. repeatedly decode `M'` to create `S` using the same algorithm until `S`'s
    size is 64 bits
 1. shuffle `M'` deterministically at byte level using `S` as a *seed* creating
@@ -114,25 +114,19 @@ truncated message.
 
 ### Hash case study: small messages in regard of *hash bit size* \*2
 
-- By small, I mean under the *hash bit size* * 2.
-- ranges from 1 byte to *hash bit size* * 8 \* 2 - 1
-- therefore, could be even or odd sized
-- odd sized messages need careful attention
-  - because they need to be padded with one byte
-  - the padding byte must be decorrelated from the message itself
-  - could be randomly generated
-
-For this kind of small message, the first step consists in padding them until
-they reach *hash bit size* * 2 in size:
-
-- compute how many bytes are necessary for the message to reach
-  *hash bit size* 2 in size
-- if byte missing count is greater than or equal to 2
-  - deterministically encode a byte from the message
-- if byte missing count equals to 1 (last step)
-  - generate a random byte to pad
-  - no correlation between padding data and the message itself
-- Then, apply the [general approach](#general-approach-for-the-hashing-algorithm)
+- By small, I mean under the *hash bit size* / 8 * 2 bytes
+- ranges from 1 byte to *hash bit size* / 8 * 2 - 1 bytes
+- first step is to build a seed by repeatedly encoding or decoding the original
+  message until it reaches a size of 64 bits at most to get a *seed* value
+  - if byte count needed to reach the 64 bits size *seed* is odd, encode up to
+    56 bits and append a random byte to finish the *seed* build
+- next step, by keeping the *PRNG* state used for *seed* computation, repeatedly
+  encode the message up to *hash bit size* / 8 * 2 at most to get the
+  *pre-hash*.
+  - if byte count needed to reach the *hash bits size* / 8 * 2 is odd, encode
+    up to one byte less and append a random byte to finish the *pre-hash* build
+- next, shuffle the *pre-hash* with a *PRNG* seeded with *seed*
+- then, decode the *pre-hash* to get the hash
 
 ### Hash case study: big messages in regard of *hash bit size* \* 2
 
