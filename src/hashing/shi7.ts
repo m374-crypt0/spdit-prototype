@@ -32,20 +32,23 @@ export class Shi7 {
     const seedAsBuffer = this.encodeUntilSizeInBits(preHash, transcoder, 64)
     const seed = BigInt(`0x${seedAsBuffer.toHex()}`)
 
-    shuffleBuffer(preHash, new UniformUint64(new Xoroshiro128Plus(new SplitMix64(seed))))
+    const d = new UniformUint64(new Xoroshiro128Plus(new SplitMix64(seed)))
+    shuffleBuffer(preHash, d)
 
     if (isMessageEmpty)
-      shuffleBuffer(preHash, new UniformUint64(new Xoroshiro128Plus(new SplitMix64(seed))))
+      shuffleBuffer(preHash, d)
 
     const hashAsBuffer = transcoder.decode(preHash)
 
     return BigInt(`0x${hashAsBuffer.toHex()}`)
   }
 
-  private encodeUntilSizeInBits(buffer: Readonly<Buffer<ArrayBuffer>>, transcoder: Transcoder, size: number) {
+  private encodeUntilSizeInBits(buffer: Readonly<Buffer<ArrayBuffer>>, transcoder: Transcoder, sizeInBits: number) {
+    const sizeInBytes = sizeInBits / 8
+
     let b: Buffer<ArrayBuffer> = buffer
 
-    while (b.byteLength > size)
+    while (b.byteLength > sizeInBytes)
       b = transcoder.decode(b)
 
     return b
