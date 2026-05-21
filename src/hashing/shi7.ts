@@ -8,7 +8,6 @@ export class Shi7 {
       : new SplitMix64().state()
 
     this.hashBitSize_ = options?.hashBitSize ?? 256
-    this.preHashSizeInBytes = this.hashBitSize_ / 8 * 2
   }
 
   hashBitSize() {
@@ -19,130 +18,160 @@ export class Shi7 {
     return this.seed_
   }
 
-  highSPD(): Readonly<SPD> {
-    return this.highSPD_ = this.highSPD_ ?? new SPD('high', { kind: 'seed', seed: this.seed_ })
+  transcoder(): Readonly<Transcoder> {
+    return this.transcoder_ = this.transcoder_ ?? new Transcoder({ highSPD: this.highSPD() })
   }
 
   hash(message: Readonly<Buffer<ArrayBuffer>>) {
-    const transcoder = new Transcoder({ highSPD: this.highSPD() })
-
     if (message.byteLength === 0)
-      return this.hashEmptyMessage(transcoder)
-    else if (message.byteLength < this.preHashSizeInBytes)
-      return this.hashSmallMessage(message, transcoder)
-    else
-      return this.hashMessage(message, transcoder)
+      return this.hashEmptyMessage()
+
+    if (this.isMessageSmallerOrEqualToSeedSize(message))
+      return this.hashSmallerThanSeedMessage(message)
+
+    if (this.isMessageBiggerThanHashSize(message))
+      return this.hashBiggerThanHashMessage(message)
+
+    return this.hashMessageSizedBetweenSeedAndHash(message)
   }
 
-  private getDistributionForPreHashShuffling(preHash: Readonly<Buffer<ArrayBuffer>>, transcoder: Transcoder, seedDiscardCount: number = 0) {
-    const seed = this.decodePreHashToSeed(preHash, transcoder)
-    const seedGenerator = new SplitMix64(seed)
-
-    while (seedDiscardCount-- > 0)
-      seedGenerator.newSeed()
-
-    return new UniformUint64(new Xoroshiro128Plus(seedGenerator))
+  private highSPD(): Readonly<SPD> {
+    return this.highSPD_ = this.highSPD_ ?? new SPD('high', { kind: 'seed', seed: this.seed_ })
   }
 
-  private hashEmptyMessage(transcoder: Transcoder) {
+  private hashEmptyMessage() {
     if (this.emptyMessageHash !== undefined)
       return this.emptyMessageHash
 
-    const preHash = this.decodeMessageToPreHash(this.highSPD().readonlyBufferView(), transcoder)
+    const hashBuffer = this.decodeUnderlyingHighSPDToHash()
 
-    // NOTE: discarding one seed changes the behavior of shuffling, avoiding
-    // collision when hashing empty message and the underlying shi7 instance
-    // high SPD
-    return this.emptyMessageHash = this.shuffleThenDecodePreHash(preHash, transcoder, 1)
+    return this.emptyMessageHash = BigInt(`0x${hashBuffer.toHex()}`) - 1n
   }
 
-  private hashSmallMessage(message: Readonly<Buffer<ArrayBuffer>>, transcoder: Transcoder) {
-    const preHash = this.encodeMessageToPreHash(message, transcoder, new SplitMix64(this.seed_))
+  private hashSmallerThanSeedMessage(message: Readonly<Buffer<ArrayBuffer>>) {
+    const seedGenerator = new SplitMix64(this.seed_)
+    const preSeedSize = Shi7.SEED_SIZE * SPD.DIMENSIONAL_FACTOR
+    const preSeed = this.encodeMessageUntilSizeInByte(message, seedGenerator, preSeedSize)
+    const preHash = this.encodePreSeedToPreHash(preSeed, seedGenerator)
 
-    return this.shuffleThenDecodePreHash(preHash, transcoder)
-  }
+    shuffleBuffer(preSeed, new UniformUint64(new Xoroshiro128Plus(seedGenerator)))
 
-  private hashMessage(message: Readonly<Buffer<ArrayBuffer>>, transcoder: Transcoder) {
-    const preHash = this.decodeMessageToPreHash(message, transcoder)
-    const oddness = message.byteLength & 1
+    const seedBuffer = this.transcoder().decode(preSeed)
+    const preHashSeedGenerator = new SplitMix64(BigInt(`0x${seedBuffer.toHex()}`))
 
-    return this.shuffleThenDecodePreHash(preHash, transcoder, oddness)
-  }
+    shuffleBuffer(preHash, new UniformUint64(new Xoroshiro128Plus(preHashSeedGenerator)))
 
-  private shuffleThenDecodePreHash(preHash: Buffer<ArrayBuffer>, transcoder: Transcoder, seedDiscardCount: number = 0) {
-    const distribution = this.getDistributionForPreHashShuffling(preHash, transcoder, seedDiscardCount)
-
-    shuffleBuffer(preHash, distribution)
-
-    return this.decodeShuffledPreHashToHash(preHash, transcoder)
-  }
-
-  private decodeMessageToPreHash(message: Readonly<Buffer<ArrayBuffer>>, transcoder: Transcoder) {
-    let b = message
-
-    while (b.byteLength > this.preHashSizeInBytes) {
-      const oddness = b.byteLength & 1
-      b = transcoder.decode(b.subarray(0, b.byteLength - oddness))
-    }
-
-    const extraByteCount = b.byteLength - this.preHashSizeInBytes
-    const decodedExtraBytes = transcoder.decode(b.subarray(0, extraByteCount))
-
-    const preHash = Buffer.from(new ArrayBuffer(this.preHashSizeInBytes))
-    preHash.set([...decodedExtraBytes, ...b.subarray(extraByteCount, b.byteLength)])
-
-    return preHash
-  }
-
-  private decodePreHashToSeed(preHash: Readonly<Buffer<ArrayBuffer>>, transcoder: Transcoder) {
-    const seedBuffer = this.decodeUntilSizeInBits(preHash, transcoder, 64)
-
-    return BigInt(`0x${seedBuffer.toHex()}`)
-  }
-
-  private decodeShuffledPreHashToHash(preHash: Readonly<Buffer<ArrayBuffer>>, transcoder: Transcoder) {
-    let b = preHash
-
-    if (b.byteLength & 1)
-      b = b.subarray(0, b.byteLength - 1)
-
-    const hashBuffer = transcoder.decode(b)
+    const hashBuffer = this.transcoder().decode(preHash)
 
     return BigInt(`0x${hashBuffer.toHex()}`)
   }
 
-  private decodeUntilSizeInBits(buffer: Readonly<Buffer<ArrayBuffer>>, transcoder: Transcoder, sizeInBits: number) {
-    const sizeInBytes = sizeInBits / 8
+  private hashBiggerThanHashMessage(message: Readonly<Buffer<ArrayBuffer>>) {
+    const hashSizedBuffer = this.decodeMessageToSizeInBytes(message, this.hashBitSize() / Shi7.BYTE_BITS)
+    const seedSizedBuffer = this.simpleChainDecodeMessageUntilSizeInBytes(hashSizedBuffer, Shi7.SEED_SIZE)
+    const seedGenerator = new SplitMix64(this.seed_)
+    const preHash = this.transcoder().encode(hashSizedBuffer, { seed: seedGenerator.newSeed() })
+    const preSeed = this.transcoder().encode(seedSizedBuffer, { seed: seedGenerator.newSeed() })
 
-    let b: Buffer<ArrayBuffer> = buffer
+    shuffleBuffer(preSeed, new UniformUint64(new Xoroshiro128Plus(seedGenerator)))
 
-    while (b.byteLength > sizeInBytes)
-      b = transcoder.decode(b)
+    const seedBuffer = this.transcoder().decode(preSeed)
+    const preHashSeedGenerator = new SplitMix64(BigInt(`0x${seedBuffer.toHex()}`))
 
-    return b
+    shuffleBuffer(preHash, new UniformUint64(new Xoroshiro128Plus(preHashSeedGenerator)))
+
+    const hashBuffer = this.transcoder().decode(preHash)
+
+    return BigInt(`0x${hashBuffer.toHex()}`)
   }
 
-  private encodeMessageToPreHash(
-    message: Readonly<Buffer<ArrayBuffer>>,
-    transcoder: Transcoder,
-    seedGenerator: SeedGenerator<bigint>): Readonly<Buffer<ArrayBuffer>> {
-    const recursiveThreshold = Math.floor(this.preHashSizeInBytes / 3)
+  private hashMessageSizedBetweenSeedAndHash(message: Readonly<Buffer<ArrayBuffer>>) {
+    const seedSizedBuffer = this.decodeMessageToSizeInBytes(message, Shi7.SEED_SIZE)
+    const seedGenerator = new SplitMix64(this.seed_)
+    const preHashSize = this.hashBitSize() / Shi7.BYTE_BITS * SPD.DIMENSIONAL_FACTOR
+    const preHash = this.encodeMessageUntilSizeInByte(message, seedGenerator, preHashSize)
+    const preSeed = this.transcoder().encode(seedSizedBuffer, { seed: seedGenerator.newSeed() })
+
+    shuffleBuffer(preSeed, new UniformUint64(new Xoroshiro128Plus(seedGenerator)))
+
+    const seedBuffer = this.transcoder().decode(preSeed)
+    const preHashSeedGenerator = new SplitMix64(BigInt(`0x${seedBuffer.toHex()}`))
+
+    shuffleBuffer(preHash, new UniformUint64(new Xoroshiro128Plus(preHashSeedGenerator)))
+
+    const hashBuffer = this.transcoder().decode(preHash)
+
+    return BigInt(`0x${hashBuffer.toHex()}`)
+  }
+
+  private isMessageSmallerOrEqualToSeedSize(message: Readonly<Buffer<ArrayBuffer>>) {
+    return message.byteLength <= Shi7.SEED_SIZE
+  }
+
+  private isMessageBiggerThanHashSize(message: Readonly<Buffer<ArrayBuffer>>) {
+    return message.byteLength >= this.hashBitSize() / Shi7.BYTE_BITS
+  }
+
+  private decodeUnderlyingHighSPDToHash() {
+    return this.simpleChainDecodeMessageUntilSizeInBytes(this.transcoder().highSPD().readonlyBufferView(), this.hashBitSize() / Shi7.BYTE_BITS)
+  }
+
+  private simpleChainDecodeMessageUntilSizeInBytes(message: Readonly<Buffer<ArrayBuffer>>, sizeInBytes: number) {
+    let sizedBuffer = message
+
+    while (sizedBuffer.byteLength > sizeInBytes)
+      sizedBuffer = this.transcoder().decode(sizedBuffer)
+
+    return sizedBuffer
+  }
+
+  private encodePreSeedToPreHash(preSeed: Readonly<Buffer<ArrayBuffer>>, seedGenerator: SeedGenerator<bigint>) {
+    let preHash = preSeed
+
+    while (preHash.byteLength < this.hashBitSize() / Shi7.BYTE_BITS)
+      preHash = this.transcoder().encode(preHash, { seed: seedGenerator.newSeed() })
+
+    return preHash
+  }
+
+  private decodeMessageToSizeInBytes(message: Readonly<Buffer<ArrayBuffer>>, sizeInBytes: number) {
+    let b = message
+
+    while (b.byteLength >= sizeInBytes * SPD.DIMENSIONAL_FACTOR) {
+      const oddness = b.byteLength & 1
+      b = Buffer.from([
+        ...this.transcoder().decode(b.subarray(0, b.byteLength - oddness)),
+        ...(oddness ? [b[b.byteLength - 1]!] : [])])
+    }
+
+    const extraBytes = b.byteLength - sizeInBytes
+    const seedSizedBuffer = Buffer.from([
+      ...this.transcoder().decode(b.subarray(0, extraBytes * SPD.DIMENSIONAL_FACTOR)),
+      ...b.subarray(extraBytes * SPD.DIMENSIONAL_FACTOR)])
+
+    return seedSizedBuffer
+  }
+
+  private encodeMessageUntilSizeInByte(message: Readonly<Buffer<ArrayBuffer>>,
+    seedGenerator: SeedGenerator<bigint>, sizeInBytes: number): Readonly<Buffer<ArrayBuffer>> {
+    const ratio = SPD.DIMENSIONAL_FACTOR + 1
+    const recursiveThreshold = Math.floor(sizeInBytes / ratio)
 
     if (message.byteLength < recursiveThreshold) {
-      const newBuffer = Buffer.from(Buffer.from(message).buffer.transfer(message.byteLength * 3))
-      const encoded = transcoder.encode(message, { seed: seedGenerator.newSeed() })
+      const newBuffer = Buffer.from(Buffer.from(message).buffer.transfer(message.byteLength * ratio))
+      const encoded = this.transcoder().encode(message, { seed: seedGenerator.newSeed() })
       newBuffer.set(message)
       newBuffer.set(encoded, message.byteLength)
 
-      return this.encodeMessageToPreHash(newBuffer, transcoder, seedGenerator)
+      return this.encodeMessageUntilSizeInByte(newBuffer, seedGenerator, sizeInBytes)
     }
 
-    const missingByteCount = this.preHashSizeInBytes - message.byteLength
+    const missingByteCount = sizeInBytes - message.byteLength
     const extraOddByte = missingByteCount & 1
     const newBuffer = Buffer.from(Buffer.from(message).buffer.transfer(message.byteLength + missingByteCount))
 
-    const bufferByteCountToEncode = Math.floor(missingByteCount / 2)
-    const encoded = transcoder.encode(message.subarray(0, bufferByteCountToEncode), { seed: seedGenerator.newSeed() })
+    const bufferByteCountToEncode = Math.floor(missingByteCount / SPD.DIMENSIONAL_FACTOR)
+    const encoded = this.transcoder().encode(message.subarray(0, bufferByteCountToEncode), { seed: seedGenerator.newSeed() })
     newBuffer.set(message)
     newBuffer.set(encoded, message.byteLength)
 
@@ -159,7 +188,10 @@ export class Shi7 {
   private hashBitSize_: HashBitSize
   private highSPD_?: SPD
   private emptyMessageHash?: bigint
-  private preHashSizeInBytes: number
+  private transcoder_?: Transcoder
+
+  private static SEED_SIZE = 8 as const
+  private static BYTE_BITS = 8 as const
 }
 
 type HashBitSize = 64 | 128 | 256 | 512 | 1024

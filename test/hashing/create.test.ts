@@ -2,7 +2,7 @@ import { Shi7 } from "src/hashing";
 import { SplitMix64, UniformUint64 } from "src/stochastic";
 import { bitwiseDiffusion } from "./utils";
 
-import { afterAll, beforeAll, describe, expect, it, xdescribe, xit } from "bun:test";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { SPD, Transcoder } from "src/transcoding";
 
 describe('hashing test suite', () => {
@@ -33,8 +33,8 @@ describe('hashing test suite', () => {
       const hasher2 = new Shi7({ seed: 43n })
       const hasher3 = new Shi7({ seed: 42n })
 
-      expect(hasher1.highSPD().readonlyBufferView()).not.toEqual(hasher2.highSPD().readonlyBufferView())
-      expect(hasher1.highSPD().readonlyBufferView()).toEqual(hasher3.highSPD().readonlyBufferView())
+      expect(hasher1.transcoder().highSPD().readonlyBufferView()).not.toEqual(hasher2.transcoder().highSPD().readonlyBufferView())
+      expect(hasher1.transcoder().highSPD().readonlyBufferView()).toEqual(hasher3.transcoder().highSPD().readonlyBufferView())
     })
   })
 
@@ -95,7 +95,7 @@ describe('hashing test suite', () => {
           const hasher = new Shi7({ seed, hashBitSize })
 
           const emptyHash = hasher.hash(empty)
-          const spdHash = hasher.hash(hasher.highSPD().readonlyBufferView())
+          const spdHash = hasher.hash(hasher.transcoder().highSPD().readonlyBufferView())
           diffusionResults.push(bitwiseDiffusion(emptyHash, spdHash))
 
           expect(emptyHash).not.toBe(spdHash)
@@ -191,7 +191,7 @@ describe('hashing test suite', () => {
         const shi7 = new Shi7({ hashBitSize: 64 })
 
         const message = Buffer.from(Array.from({ length: 64 / 8 * 2 * SPD.DIMENSIONAL_FACTOR }, () => 42))
-        const decodedMessage = new Transcoder({ highSPD: shi7.highSPD() }).decode(message)
+        const decodedMessage = new Transcoder({ highSPD: shi7.transcoder().highSPD() }).decode(message)
 
         expect(shi7.hash(message)).not.toBe(shi7.hash(decodedMessage))
       })
