@@ -2,7 +2,8 @@ import { Shi7 } from "src/hashing";
 import { SplitMix64, UniformUint64 } from "src/stochastic";
 import { bitwiseDiffusion } from "./utils";
 
-import { afterAll, beforeAll, describe, expect, it, xdescribe } from "bun:test";
+import { afterAll, beforeAll, describe, expect, it, xdescribe, xit } from "bun:test";
+import { SPD, Transcoder } from "src/transcoding";
 
 describe('hashing test suite', () => {
   describe('shi7 instantiation', () => {
@@ -177,12 +178,22 @@ describe('hashing test suite', () => {
       })
 
     describe('collision resistance', () => {
-      it('should not create collision between odd size message and a ressembling even sized message', () => {
-        const shi7 = new Shi7({ hashBitSize: 64 })
-        const oddSizedMessage = Buffer.from(Array.from({ length: 19 }, () => 97))
-        const evenSizedMessage = Buffer.from(Array.from({ length: 18 }, () => 97))
+      it.each(shi7OptionsSample(10))
+        ('should not create collision between odd size message and a ressembling even sized message', ({ hashBitSize }) => {
+          const shi7 = new Shi7({ hashBitSize })
+          const oddSizedMessage = Buffer.from(Array.from({ length: hashBitSize / 8 * SPD.DIMENSIONAL_FACTOR + 1 }, () => 42))
+          const evenSizedMessage = Buffer.from(Array.from({ length: hashBitSize / 8 * SPD.DIMENSIONAL_FACTOR }, () => 42))
 
-        expect(shi7.hash(oddSizedMessage)).not.toBe(shi7.hash(evenSizedMessage))
+          expect(shi7.hash(oddSizedMessage)).not.toBe(shi7.hash(evenSizedMessage))
+        })
+
+      it('should not create collision between a message and the same message but decoded', () => {
+        const shi7 = new Shi7({ hashBitSize: 64 })
+
+        const message = Buffer.from(Array.from({ length: 64 / 8 * 2 * SPD.DIMENSIONAL_FACTOR }, () => 42))
+        const decodedMessage = new Transcoder({ highSPD: shi7.highSPD() }).decode(message)
+
+        expect(shi7.hash(message)).not.toBe(shi7.hash(decodedMessage))
       })
     })
 
