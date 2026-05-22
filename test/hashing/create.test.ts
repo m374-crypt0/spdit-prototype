@@ -128,7 +128,7 @@ describe('hashing test suite', () => {
             const diffusionMean = diffusionResults
               .reduce((acc, cur) => acc + cur, 0) / diffusionResults.length
 
-            expect(diffusionMean).toBeWithin(0.45, 0.56)
+            expect(diffusionMean).toBeWithin(0.45, 0.551)
           })
         })
       })
@@ -253,7 +253,7 @@ describe('hashing test suite', () => {
             const diffusionMean = preImagesDiffusions
               .reduce((acc, cur) => acc + cur, 0) / preImagesDiffusions.length
 
-            expect(diffusionMean).toBeWithin(0.45, 0.56)
+            expect(diffusionMean).toBeWithin(0.45, 0.551)
           })
         })
       })
@@ -401,7 +401,7 @@ describe('hashing test suite', () => {
             const diffusionMean = preImagesDiffusions
               .reduce((acc, cur) => acc + cur, 0) / preImagesDiffusions.length
 
-            expect(diffusionMean).toBeWithin(0.45, 0.56)
+            expect(diffusionMean).toBeWithin(0.45, 0.551)
           })
         })
       })
