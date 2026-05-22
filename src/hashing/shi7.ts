@@ -59,7 +59,7 @@ export class Shi7 {
 
   private hashBiggerThanHashMessage(message: Readonly<Buffer<ArrayBuffer>>) {
     const seedGenerator = new SplitMix64(this.seed_)
-    const hashSizedBuffer = this.decodeMessageToSizeInBytes(message, this.hashBitSize() / Shi7.BYTE_BITS, seedGenerator)
+    const hashSizedBuffer = this.decodeMessageUntilSizeInBytes(message, this.hashBitSize() / Shi7.BYTE_BITS, seedGenerator)
     const seedSizedBuffer = this.simpleChainDecodeMessageUntilSizeInBytes(hashSizedBuffer, Shi7.SEED_SIZE)
     const preHash = this.transcoder().encode(hashSizedBuffer, { seed: seedGenerator.newSeed() })
     const preSeed = this.transcoder().encode(seedSizedBuffer, { seed: seedGenerator.newSeed() })
@@ -69,7 +69,7 @@ export class Shi7 {
 
   private hashMessageSizedBetweenSeedAndHash(message: Readonly<Buffer<ArrayBuffer>>) {
     const seedGenerator = new SplitMix64(this.seed_)
-    const seedSizedBuffer = this.decodeMessageToSizeInBytes(message, Shi7.SEED_SIZE, seedGenerator)
+    const seedSizedBuffer = this.decodeMessageUntilSizeInBytes(message, Shi7.SEED_SIZE, seedGenerator)
     const preHashSize = this.hashBitSize() / Shi7.BYTE_BITS * SPD.DIMENSIONAL_FACTOR
     const preHash = this.encodeMessageUntilSizeInByte(message, seedGenerator, preHashSize)
     const preSeed = this.transcoder().encode(seedSizedBuffer, { seed: seedGenerator.newSeed() })
@@ -120,8 +120,14 @@ export class Shi7 {
     return preHash
   }
 
-  private decodeMessageToSizeInBytes(message: Readonly<Buffer<ArrayBuffer>>, sizeInBytes: number, seedGenerator: SeedGenerator<bigint>) {
+  private decodeMessageUntilSizeInBytes(message: Readonly<Buffer<ArrayBuffer>>, sizeInBytes: number, seedGenerator: SeedGenerator<bigint>) {
     let b = message
+
+    // NOTE: discarding a seed here when the message M is odd-sized ensure there
+    // are no collisions between a message M` where M` is a subset of M
+    // with M` = M - x, x being an arbitrary byte and M and M` are very similar
+    if (message.byteLength & 1)
+      seedGenerator.newSeed()
 
     while (b.byteLength >= sizeInBytes * SPD.DIMENSIONAL_FACTOR) {
       const oddness = b.byteLength & 1

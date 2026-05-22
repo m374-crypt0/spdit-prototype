@@ -2,7 +2,7 @@ import { Shi7 } from "src/hashing";
 import { SplitMix64, UniformUint64 } from "src/stochastic";
 import { bitwiseDiffusion } from "./utils";
 
-import { afterAll, beforeAll, describe, expect, it, xit } from "bun:test";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { SPD, Transcoder } from "src/transcoding";
 
 describe('hashing test suite', () => {
@@ -28,7 +28,7 @@ describe('hashing test suite', () => {
       expect(hasher.seed()).toBeDefined()
     })
 
-    it('should expose a readonly high SPD at instantiation, whose content depends on seed', () => {
+    it('should expose a readonly transcoder, whose underlying high SPD content depends on seed', () => {
       const hasher1 = new Shi7({ seed: 42n })
       const hasher2 = new Shi7({ seed: 43n })
       const hasher3 = new Shi7({ seed: 42n })
@@ -38,177 +38,173 @@ describe('hashing test suite', () => {
     })
   })
 
-  describe('hashing empty message', () => {
-    const empty = Buffer.from(new ArrayBuffer(0))
+  describe.each([64, 128, 256, 512, 1024])
+    ('hashing empty message', hashBitSize => {
+      const empty = Buffer.from(new ArrayBuffer(0))
 
-    it.each(shi7OptionsSample(10))
-      ('should give the same value for the same Shi7 instance', ({ hashBitSize, seed }) => {
-        const hasher1 = new Shi7({ hashBitSize, seed })
-        const hasher2 = new Shi7({ hashBitSize: hasher1.hashBitSize(), seed: hasher1.seed() })
+      it.each(generateSeeds(10))
+        ('should give the same value for the same Shi7 instance', seed => {
+          const hasher1 = new Shi7({ hashBitSize, seed })
+          const hasher2 = new Shi7({ hashBitSize, seed })
 
-        expect(hasher1.hash(empty)).toBe(hasher2.hash(empty))
-      })
-
-    describe('collision resistance', () => {
-      let hashes: Set<bigint>
-
-      beforeAll(() => hashes = new Set<bigint>)
-
-      it.each(shi7OptionsSample(10))
-        ('should not collide hash values between different Shi7 instances', ({ seed, hashBitSize }) => {
-          hashes.add(new Shi7({ seed, hashBitSize }).hash(empty))
+          expect(hasher1).not.toBe(hasher2)
+          expect(hasher1.hash(empty)).toBe(hasher2.hash(empty))
         })
 
-      afterAll(() => expect(hashes.size).toBe(50))
-    })
+      describe('collision resistance', () => {
+        let hashes: Set<bigint>
 
-    describe('diffusion properties', () => {
-      let hashes: Array<bigint>
+        beforeAll(() => hashes = new Set<bigint>)
 
-      beforeAll(() => hashes = new Array<bigint>)
+        it.each(generateSeeds(10))
+          ('should not collide hash values between different Shi7 instances', seed => {
+            hashes.add(new Shi7({ seed, hashBitSize }).hash(empty))
+          })
 
-      it.each(shi7OptionsSample(10))
-        ('should give pretty different hashes for seeds differing by one bit', ({ seed, hashBitSize }) => {
-          hashes.push(new Shi7({ seed, hashBitSize }).hash(empty))
+        afterAll(() => expect(hashes.size).toBe(10))
+      })
+
+      describe('diffusion properties', () => {
+        let hashes: Array<bigint>
+
+        beforeAll(() => hashes = new Array<bigint>)
+
+        it.each(generateSeeds(10))
+          ('should give pretty different hashes for seeds differing by one bit', seed => {
+            hashes.push(new Shi7({ seed, hashBitSize }).hash(empty))
+          })
+
+        afterAll(() => {
+          const diffusionResults = new Array<number>
+
+          for (let i = 0; i < hashes.length; i += 2)
+            diffusionResults.push(bitwiseDiffusion(hashes[i]!, hashes[i + 1]!))
+
+          const diffusionMean = diffusionResults
+            .reduce((acc, cur) => acc + cur, 0) / diffusionResults.length
+
+          expect(diffusionMean).toBeWithin(0.45, 0.56)
         })
-
-      afterAll(() => {
-        const diffusionResults = new Array<number>
-
-        for (let i = 0; i < hashes.length; i += 2)
-          diffusionResults.push(bitwiseDiffusion(hashes[i]!, hashes[i + 1]!))
-
-        const diffusionMean = diffusionResults
-          .reduce((acc, cur) => acc + cur, 0) / diffusionResults.length
-
-        expect(diffusionMean).toBeWithin(0.45, 0.56)
       })
-    })
 
-    describe('pre-image attacks resistance', () => {
-      let diffusionResults: Array<number>
+      describe('pre-image attacks resistance', () => {
+        let diffusionResults: Array<number>
 
-      beforeAll(() => diffusionResults = [])
+        beforeAll(() => diffusionResults = [])
 
-      it.each(shi7OptionsSample(10))
-        ('should differ largely for an empty message hash and the underlying SPD hash', ({ seed, hashBitSize }) => {
-          const hasher = new Shi7({ seed, hashBitSize })
+        it.each(generateSeeds(10))
+          ('should differ largely for an empty message hash and the underlying SPD hash', seed => {
+            const hasher = new Shi7({ seed, hashBitSize })
 
-          const emptyHash = hasher.hash(empty)
-          const spdHash = hasher.hash(hasher.transcoder().highSPD().readonlyBufferView())
-          diffusionResults.push(bitwiseDiffusion(emptyHash, spdHash))
+            const emptyHash = hasher.hash(empty)
+            const spdHash = hasher.hash(hasher.transcoder().highSPD().readonlyBufferView())
+            diffusionResults.push(bitwiseDiffusion(emptyHash, spdHash))
 
-          expect(emptyHash).not.toBe(spdHash)
+            expect(emptyHash).not.toBe(spdHash)
+          })
+
+        afterAll(() => {
+          const diffusionMean = diffusionResults
+            .reduce((acc, cur) => acc + cur, 0) / diffusionResults.length
+
+          expect(diffusionMean).toBeWithin(0.45, 0.56)
         })
-
-      afterAll(() => {
-        const diffusionMean = diffusionResults
-          .reduce((acc, cur) => acc + cur, 0) / diffusionResults.length
-
-        expect(diffusionMean).toBeWithin(0.45, 0.56)
       })
     })
-  })
 
-  describe('hashing small messages in regard of hash bit size', () => {
-    it.each(shi7OptionsSample(10))
-      ('should have the same hash for the same message', ({ hashBitSize, seed }) => {
-        const shi7 = new Shi7({ hashBitSize, seed })
-        const message = Buffer.from('hello SPDIT!')
-
-        const hash = shi7.hash(message)
-
-        expect(hash).toBe(new Shi7({ seed, hashBitSize }).hash(Buffer.from('hello SPDIT!')))
-      })
-
-    describe('collision resistance', () => {
-      it.each(shi7OptionsSample(1))
-        ('should give as many hashes as there are hash function calls', ({ hashBitSize, seed }) => {
+  describe.each([64, 128, 256, 512, 1024])
+    ('hashing small messages in regard of hash bit size', hashBitSize => {
+      it.each(generateSeeds(10))
+        ('should have the same hash for the same message', seed => {
           const shi7 = new Shi7({ hashBitSize, seed })
-          const messages = generateRandomUniqueMessages({ minSize: 1, maxSize: hashBitSize / 8 - 1, maxCount: 100 })
-          const hashes = new Set<bigint>
+          const message = Buffer.from('hello SPDIT!')
 
-          messages.forEach(m => hashes.add(shi7.hash(m)))
+          const hash = shi7.hash(message)
 
-          expect(hashes.size).toBe(messages.length)
+          expect(hash).toBe(new Shi7({ seed, hashBitSize }).hash(Buffer.from('hello SPDIT!')))
         })
+
+      describe('collision resistance', () => {
+        it.each(generateSeeds(10))
+          ('should give as many hashes as there are hash function calls', seed => {
+            const shi7 = new Shi7({ hashBitSize, seed })
+            const messages = generateRandomUniqueMessages({ minSize: 1, maxSize: hashBitSize / 8 - 1, maxCount: 100 })
+            const hashes = new Set<bigint>
+
+            messages.forEach(m => hashes.add(shi7.hash(m)))
+
+            expect(hashes.size).toBe(messages.length)
+          })
+      })
+
+      describe('pre-image attacks resistance', () => { })
+
+      describe('diffusion properties', () => {
+        let hashes: Array<bigint>
+
+        beforeAll(() => hashes = new Array<bigint>)
+
+        it.each(generateSeeds(10))
+          ('should give pretty different hashes for seeds differing by one bit', seed => {
+            const shi7 = new Shi7({ hashBitSize, seed })
+            const messages = generateRandomUniqueMessages({ minSize: 1, maxSize: hashBitSize / 8 - 1, maxCount: 100 })
+
+            messages.forEach(m => hashes.push(shi7.hash(m)))
+          })
+
+        afterAll(() => {
+          const diffusionResults = new Array<number>
+
+          for (let i = 0; i < hashes.length; i += 2)
+            diffusionResults.push(bitwiseDiffusion(hashes[i]!, hashes[i + 1] ?? 0n))
+
+          const diffusionMean = diffusionResults
+            .reduce((acc, cur) => acc + cur, 0) / diffusionResults.length
+
+          expect(diffusionMean).toBeWithin(0.45, 0.56)
+        })
+      })
     })
 
-    // NOTE: due to the nature of SPDIT, there is no information conveyed by
-    // transcoding thus, no pre-image information can be obtaineed from the
-    // hash
-    describe('pre-image attacks resistance', () => { })
-
-    describe('diffusion properties', () => {
-      let hashes: Array<bigint>
-
-      beforeAll(() => hashes = new Array<bigint>)
-
-      it.each(shi7OptionsSample(1))
-        ('should give pretty different hashes for seeds differing by one bit', ({ seed, hashBitSize }) => {
+  describe.each([64, 128, 256, 512, 1024])
+    ('hashing big messages in regard of hash bit size', hashBitSize => {
+      it.each(generateSeeds(10))
+        ('should have the same hash for the same message', seed => {
           const shi7 = new Shi7({ hashBitSize, seed })
-          const messages = generateRandomUniqueMessages({ minSize: 1, maxSize: hashBitSize / 8 - 1, maxCount: 100 })
+          const message = generateRandomUniqueMessages({ minSize: 1_000_000, maxSize: 2_000_000, maxCount: 1 })[0]!
 
-          messages.forEach(m => hashes.push(shi7.hash(m)))
+          const hash = shi7.hash(message)
+
+          expect(hash).toBe(new Shi7({ seed, hashBitSize }).hash(message))
         })
 
-      afterAll(() => {
-        const diffusionResults = new Array<number>
+      describe('collision resistance', () => {
+        it.each(generateSeeds(10))
+          ('should not create collision between odd size message and a ressembling even sized message', seed => {
+            const shi7 = new Shi7({ hashBitSize, seed })
+            const oddSizedMessage = Buffer.from(Array.from({ length: hashBitSize / 8 * SPD.DIMENSIONAL_FACTOR + 1 }, () => 42))
+            const evenSizedMessage = Buffer.from(Array.from({ length: hashBitSize / 8 * SPD.DIMENSIONAL_FACTOR }, () => 42))
 
-        for (let i = 0; i < hashes.length; i += 2)
-          diffusionResults.push(bitwiseDiffusion(hashes[i]!, hashes[i + 1] ?? 0n))
+            expect(shi7.hash(oddSizedMessage)).not.toBe(shi7.hash(evenSizedMessage))
+          })
 
-        const diffusionMean = diffusionResults
-          .reduce((acc, cur) => acc + cur, 0) / diffusionResults.length
+        it('should not create collision between a message and the same message but decoded', () => {
+          const shi7 = new Shi7({ hashBitSize: 64 })
 
-        expect(diffusionMean).toBeWithin(0.45, 0.56)
-      })
-    })
-  })
+          const message = Buffer.from(Array.from({ length: 64 / 8 * 2 * SPD.DIMENSIONAL_FACTOR }, () => 42))
+          const decodedMessage = new Transcoder({ highSPD: shi7.transcoder().highSPD() }).decode(message)
 
-  describe('hashing big messages in regard of hash bit size', () => {
-    it.each(shi7OptionsSample(1))
-      ('should have the same hash for the same message', ({ hashBitSize, seed }) => {
-        const shi7 = new Shi7({ hashBitSize, seed })
-        const message = generateRandomUniqueMessages({ minSize: 1_000_000, maxSize: 2_000_000, maxCount: 1 })[0]!
-
-        const hash = shi7.hash(message)
-
-        expect(hash).toBe(new Shi7({ seed, hashBitSize }).hash(message))
-      })
-
-    describe('collision resistance', () => {
-      it.each(shi7OptionsSample(10))
-        ('should not create collision between odd size message and a ressembling even sized message', ({ hashBitSize }) => {
-          const shi7 = new Shi7({ hashBitSize })
-          const oddSizedMessage = Buffer.from(Array.from({ length: hashBitSize / 8 * SPD.DIMENSIONAL_FACTOR + 1 }, () => 42))
-          const evenSizedMessage = Buffer.from(Array.from({ length: hashBitSize / 8 * SPD.DIMENSIONAL_FACTOR }, () => 42))
-
-          expect(shi7.hash(oddSizedMessage)).not.toBe(shi7.hash(evenSizedMessage))
+          expect(shi7.hash(message)).not.toBe(shi7.hash(decodedMessage))
         })
-
-      it('should not create collision between a message and the same message but decoded', () => {
-        const shi7 = new Shi7({ hashBitSize: 64 })
-
-        const message = Buffer.from(Array.from({ length: 64 / 8 * 2 * SPD.DIMENSIONAL_FACTOR }, () => 42))
-        const decodedMessage = new Transcoder({ highSPD: shi7.transcoder().highSPD() }).decode(message)
-
-        expect(shi7.hash(message)).not.toBe(shi7.hash(decodedMessage))
       })
-    })
 
-    describe('pre-image attacks resistance', () => { })
-    describe('diffusion properties', () => { })
-  })
+      describe('pre-image attacks resistance', () => { })
+      describe('diffusion properties', () => { })
+    })
 })
 
-function shi7OptionsSample(count: number) {
-  return ([64, 128, 256, 512, 1024] as const)
-    .map(hashBitSize =>
-      Array.from({ length: count }, () => new SplitMix64().newSeed())
-        .map(seed => ({ seed, hashBitSize }))
-    )
-    .flat()
+function generateSeeds(count: number) {
+  return Array.from({ length: count }, () => new SplitMix64().newSeed())
 }
 
 function generateRandomUniqueMessages(options: GenerateRandomMessagesOptions) {
