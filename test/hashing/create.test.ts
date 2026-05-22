@@ -187,7 +187,7 @@ describe('hashing test suite', () => {
           expect(shi7.hash(oddSizedMessage)).not.toBe(shi7.hash(evenSizedMessage))
         })
 
-      xit('should not create collision between a message and the same message but decoded', () => {
+      it('should not create collision between a message and the same message but decoded', () => {
         const shi7 = new Shi7({ hashBitSize: 64 })
 
         const message = Buffer.from(Array.from({ length: 64 / 8 * 2 * SPD.DIMENSIONAL_FACTOR }, () => 42))

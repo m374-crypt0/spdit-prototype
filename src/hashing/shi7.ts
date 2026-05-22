@@ -58,9 +58,9 @@ export class Shi7 {
   }
 
   private hashBiggerThanHashMessage(message: Readonly<Buffer<ArrayBuffer>>) {
-    const hashSizedBuffer = this.decodeMessageToSizeInBytes(message, this.hashBitSize() / Shi7.BYTE_BITS)
-    const seedSizedBuffer = this.simpleChainDecodeMessageUntilSizeInBytes(hashSizedBuffer, Shi7.SEED_SIZE)
     const seedGenerator = new SplitMix64(this.seed_)
+    const hashSizedBuffer = this.decodeMessageToSizeInBytes(message, this.hashBitSize() / Shi7.BYTE_BITS, seedGenerator)
+    const seedSizedBuffer = this.simpleChainDecodeMessageUntilSizeInBytes(hashSizedBuffer, Shi7.SEED_SIZE)
     const preHash = this.transcoder().encode(hashSizedBuffer, { seed: seedGenerator.newSeed() })
     const preSeed = this.transcoder().encode(seedSizedBuffer, { seed: seedGenerator.newSeed() })
 
@@ -68,8 +68,8 @@ export class Shi7 {
   }
 
   private hashMessageSizedBetweenSeedAndHash(message: Readonly<Buffer<ArrayBuffer>>) {
-    const seedSizedBuffer = this.decodeMessageToSizeInBytes(message, Shi7.SEED_SIZE)
     const seedGenerator = new SplitMix64(this.seed_)
+    const seedSizedBuffer = this.decodeMessageToSizeInBytes(message, Shi7.SEED_SIZE, seedGenerator)
     const preHashSize = this.hashBitSize() / Shi7.BYTE_BITS * SPD.DIMENSIONAL_FACTOR
     const preHash = this.encodeMessageUntilSizeInByte(message, seedGenerator, preHashSize)
     const preSeed = this.transcoder().encode(seedSizedBuffer, { seed: seedGenerator.newSeed() })
@@ -120,7 +120,7 @@ export class Shi7 {
     return preHash
   }
 
-  private decodeMessageToSizeInBytes(message: Readonly<Buffer<ArrayBuffer>>, sizeInBytes: number) {
+  private decodeMessageToSizeInBytes(message: Readonly<Buffer<ArrayBuffer>>, sizeInBytes: number, seedGenerator: SeedGenerator<bigint>) {
     let b = message
 
     while (b.byteLength >= sizeInBytes * SPD.DIMENSIONAL_FACTOR) {
@@ -128,6 +128,10 @@ export class Shi7 {
       b = Buffer.from([
         ...this.transcoder().decode(b.subarray(0, b.byteLength - oddness)),
         ...(oddness ? [b[b.byteLength - 1]!] : [])])
+
+      // NOTE: discarding a seed in a message decode step ensure there is no
+      // collision between hashing a message M and M' with M` = decoded(M)
+      seedGenerator.newSeed()
     }
 
     const extraBytes = b.byteLength - sizeInBytes
