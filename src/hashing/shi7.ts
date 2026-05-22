@@ -123,8 +123,8 @@ export class Shi7 {
   private decodeMessageUntilSizeInBytes(message: Readonly<Buffer<ArrayBuffer>>, sizeInBytes: number, seedGenerator: SeedGenerator<bigint>) {
     let b = message
 
-    // NOTE: discarding a seed here when the message M is odd-sized ensure there
-    // are no collisions between a message M` where M` is a subset of M
+    // NOTE: discarding a seed here when the message M is odd-sized reduces the
+    // collision risk between a message M` where M` is a subset of M
     // with M` = M - x, x being an arbitrary byte and M and M` are very similar
     if (message.byteLength & 1)
       seedGenerator.newSeed()
@@ -135,8 +135,8 @@ export class Shi7 {
         ...this.transcoder().decode(b.subarray(0, b.byteLength - oddness)),
         ...(oddness ? [b[b.byteLength - 1]!] : [])])
 
-      // NOTE: discarding a seed in a message decode step ensure there is no
-      // collision between hashing a message M and M' with M` = decoded(M)
+      // NOTE: discarding a seed in a message decode step reduce the
+      // collision risk between hashing a message M and M' with M` = decoded(M)
       seedGenerator.newSeed()
     }
 

@@ -113,7 +113,7 @@ describe('exchange test suite', () => {
         })
       })
 
-      describe.only('from finalized', () => {
+      describe('from finalized', () => {
         describe('initiator and recipient share the same initial low SPD', () => {
           const lowSPD = new SPD('low')
 

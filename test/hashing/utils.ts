@@ -1,4 +1,4 @@
-import { UniformUint64 } from "src/stochastic";
+import { SplitMix64, UniformUint64 } from "src/stochastic";
 
 export function bitwiseDiffusion(a: bigint, b: bigint) {
   const [_, max] = a < b ? [a, b] : [b, a]
@@ -6,6 +6,22 @@ export function bitwiseDiffusion(a: bigint, b: bigint) {
   let distance = 0; for (let xor = a ^ b; xor > 0n; xor &= xor - 1n, distance++);
 
   return distance / bitCount
+}
+
+export function bigintToBuffer(value: bigint, bitSize: number) {
+  const byteSize = bitSize / 8
+  const buffer = Buffer.from(new ArrayBuffer(byteSize))
+
+  for (let i = 0; i < byteSize; i++) {
+    buffer[byteSize - 1 - i] = Number(value & 0xffn)
+    value >>= 8n
+  }
+
+  return buffer
+}
+
+export function generateSeeds(count: number) {
+  return Array.from({ length: count }, () => new SplitMix64().newSeed())
 }
 
 export function generateRandomUniqueMessages(options: GenerateRandomMessagesOptions) {
