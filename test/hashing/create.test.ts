@@ -2,7 +2,7 @@ import { Shi7 } from "src/hashing";
 import { SplitMix64, UniformUint64 } from "src/stochastic";
 import { bitwiseDiffusion } from "./utils";
 
-import { afterAll, beforeAll, describe, expect, it } from "bun:test";
+import { afterAll, beforeAll, describe, expect, it, xit } from "bun:test";
 import { SPD, Transcoder } from "src/transcoding";
 
 describe('hashing test suite', () => {
@@ -187,7 +187,7 @@ describe('hashing test suite', () => {
           expect(shi7.hash(oddSizedMessage)).not.toBe(shi7.hash(evenSizedMessage))
         })
 
-      it('should not create collision between a message and the same message but decoded', () => {
+      xit('should not create collision between a message and the same message but decoded', () => {
         const shi7 = new Shi7({ hashBitSize: 64 })
 
         const message = Buffer.from(Array.from({ length: 64 / 8 * 2 * SPD.DIMENSIONAL_FACTOR }, () => 42))

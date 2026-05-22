@@ -54,16 +54,7 @@ export class Shi7 {
     const preSeed = this.encodeMessageUntilSizeInByte(message, seedGenerator, preSeedSize)
     const preHash = this.encodePreSeedToPreHash(preSeed, seedGenerator)
 
-    shuffleBuffer(preSeed, new UniformUint64(new Xoroshiro128Plus(seedGenerator)))
-
-    const seedBuffer = this.transcoder().decode(preSeed)
-    const preHashSeedGenerator = new SplitMix64(BigInt(`0x${seedBuffer.toHex()}`))
-
-    shuffleBuffer(preHash, new UniformUint64(new Xoroshiro128Plus(preHashSeedGenerator)))
-
-    const hashBuffer = this.transcoder().decode(preHash)
-
-    return BigInt(`0x${hashBuffer.toHex()}`)
+    return this.hashMessage(preSeed, preHash, seedGenerator)
   }
 
   private hashBiggerThanHashMessage(message: Readonly<Buffer<ArrayBuffer>>) {
@@ -73,16 +64,7 @@ export class Shi7 {
     const preHash = this.transcoder().encode(hashSizedBuffer, { seed: seedGenerator.newSeed() })
     const preSeed = this.transcoder().encode(seedSizedBuffer, { seed: seedGenerator.newSeed() })
 
-    shuffleBuffer(preSeed, new UniformUint64(new Xoroshiro128Plus(seedGenerator)))
-
-    const seedBuffer = this.transcoder().decode(preSeed)
-    const preHashSeedGenerator = new SplitMix64(BigInt(`0x${seedBuffer.toHex()}`))
-
-    shuffleBuffer(preHash, new UniformUint64(new Xoroshiro128Plus(preHashSeedGenerator)))
-
-    const hashBuffer = this.transcoder().decode(preHash)
-
-    return BigInt(`0x${hashBuffer.toHex()}`)
+    return this.hashMessage(preSeed, preHash, seedGenerator)
   }
 
   private hashMessageSizedBetweenSeedAndHash(message: Readonly<Buffer<ArrayBuffer>>) {
@@ -92,6 +74,10 @@ export class Shi7 {
     const preHash = this.encodeMessageUntilSizeInByte(message, seedGenerator, preHashSize)
     const preSeed = this.transcoder().encode(seedSizedBuffer, { seed: seedGenerator.newSeed() })
 
+    return this.hashMessage(preSeed, preHash, seedGenerator)
+  }
+
+  private hashMessage(preSeed: Buffer<ArrayBuffer>, preHash: Buffer<ArrayBuffer>, seedGenerator: SeedGenerator<bigint>) {
     shuffleBuffer(preSeed, new UniformUint64(new Xoroshiro128Plus(seedGenerator)))
 
     const seedBuffer = this.transcoder().decode(preSeed)
