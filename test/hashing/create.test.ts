@@ -114,6 +114,14 @@ describe('hashing test suite', () => {
 
   describe.each([64, 128, 256, 512, 1024])
     ('hashing small messages in regard of hash bit size', hashBitSize => {
+      it('should give different hashes for the same message hashed with different seeds', () => {
+        const shi7_1 = new Shi7({ hashBitSize })
+        const shi7_2 = new Shi7({ hashBitSize, seed: shi7_1.seed() + 1n })
+        const message = Buffer.from('hello SPDIT!')
+
+        expect(shi7_1.hash(message)).not.toBe(shi7_2.hash(message))
+      })
+
       it.each(generateSeeds(10))
         ('should have the same hash for the same message', seed => {
           const shi7 = new Shi7({ hashBitSize, seed })
@@ -168,6 +176,14 @@ describe('hashing test suite', () => {
 
   describe.each([64, 128, 256, 512, 1024])
     ('hashing big messages in regard of hash bit size', hashBitSize => {
+      it('should give different hashes for the same message hashed with different seeds', () => {
+        const shi7_1 = new Shi7({ hashBitSize })
+        const shi7_2 = new Shi7({ hashBitSize, seed: shi7_1.seed() + 1n })
+        const message = generateRandomUniqueMessages({ minSize: 1_000_000, maxSize: 2_000_000, maxCount: 1 })[0]!
+
+        expect(shi7_1.hash(message)).not.toBe(shi7_2.hash(message))
+      })
+
       it.each(generateSeeds(10))
         ('should have the same hash for the same message', seed => {
           const shi7 = new Shi7({ hashBitSize, seed })
