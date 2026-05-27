@@ -114,7 +114,7 @@ export class Shi7 {
   private encodePreSeedToPreHash(preSeed: Readonly<Buffer<ArrayBuffer>>, seedGenerator: SeedGenerator<bigint>) {
     let preHash = preSeed
 
-    while (preHash.byteLength < this.hashBitSize() / Shi7.BYTE_BITS)
+    while (preHash.byteLength < this.hashBitSize() / Shi7.BYTE_BITS * SPD.DIMENSIONAL_FACTOR)
       preHash = this.transcoder().encode(preHash, { seed: seedGenerator.newSeed() })
 
     return preHash

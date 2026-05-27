@@ -10,13 +10,17 @@ Independent structural review of `src/hashing/shi7.ts` and its dependencies
 > *verified* were spot-checked by running probe scripts against the current
 > implementation. None of this constitutes a positive security claim — the
 > absence of a finding does not mean the construction is safe.
+> [!NOTE]
+> Probe scripts used to generate this report have been removed because of their
+> temporary meaning. To ensure a finding is *verifier*, one must create a probe
+> script to assess the fix regarding this finding.
 
 ## 0. Threat model assumed
 
 Inferred from `draft/how-to-start.md` and `docs/glossary.md`:
 
-- Shi7 is a **keyed hash** (a MAC, really): the `seed` is secret and produces
-  the high SPD via a deterministic derivation chain (`SplitMix64` →
+- Shi7 is a **keyed hash** (a MAC, really): the `seed` may be secret or not and
+  produces the high SPD via a deterministic derivation chain (`SplitMix64` →
   `Xoroshiro128+` → SPD generation).
 - The high SPD is the actual cryptographic state; the seed is only its
   compressed representation.
