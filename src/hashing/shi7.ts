@@ -43,7 +43,9 @@ export class Shi7 {
     if (this.emptyMessageHash !== undefined)
       return this.emptyMessageHash
 
-    const hashBuffer = this.decodeUnderlyingHighSPDToHash()
+    const hashBuffer =
+      this.simpleChainDecodeMessageUntilSizeInBytes(this.transcoder().highSPD().readonlyBufferView(),
+        this.hashBitSize() / Shi7.BYTE_BITS)
 
     return this.emptyMessageHash = BigInt(`0x${hashBuffer.toHex()}`) - 1n
   }
@@ -96,10 +98,6 @@ export class Shi7 {
 
   private isMessageBiggerThanHashSize(message: Readonly<Buffer<ArrayBuffer>>) {
     return message.byteLength >= this.hashBitSize() / Shi7.BYTE_BITS
-  }
-
-  private decodeUnderlyingHighSPDToHash() {
-    return this.simpleChainDecodeMessageUntilSizeInBytes(this.transcoder().highSPD().readonlyBufferView(), this.hashBitSize() / Shi7.BYTE_BITS)
   }
 
   private simpleChainDecodeMessageUntilSizeInBytes(message: Readonly<Buffer<ArrayBuffer>>, sizeInBytes: number) {
@@ -180,11 +178,27 @@ export class Shi7 {
     return newBuffer
   }
 
+  private initializeDomainMagicBytes() {
+    const seedGenerator = new SplitMix64(this.seed_)
+    const d = new UniformUint64(new Xoroshiro128Plus(seedGenerator))
+    const s = new Set<number>
+
+    while (s.size < DomainIndices.last) {
+      s.clear()
+
+      for (let i = 0; i < DomainIndices.last; i++)
+        s.add(Number(d.newUint([0n, 255n])))
+    }
+
+    return s.values().toArray() as [number, number, number, number]
+  }
+
   private seed_: bigint
   private hashBitSize_: HashBitSize
   private highSPD_?: SPD
   private emptyMessageHash?: bigint
   private transcoder_?: Transcoder
+  private domainMagicBytes: Readonly<[number, number, number, number]> = this.initializeDomainMagicBytes()
 
   private static SEED_SIZE = 8 as const
   private static BYTE_BITS = 8 as const
@@ -195,4 +209,12 @@ type HashBitSize = 64 | 128 | 256 | 512 | 1024
 type Options = {
   seed?: bigint,
   hashBitSize?: HashBitSize
+}
+
+enum DomainIndices {
+  empty,
+  small,
+  medium,
+  big,
+  last
 }
