@@ -1,3 +1,5 @@
+import { randomBytes } from 'crypto'
+
 /**
  * A generic type for a seed generator
  */
@@ -29,7 +31,8 @@ export class SplitMix64 implements SeedGenerator<bigint> {
    * built-in fitting into a 64 bits sized unsigned integer
    */
   constructor(state?: bigint) {
-    const s = state ?? BigInt(Math.random().toFixed(20).slice(2))
+    const b = randomBytes(8)
+    const s = state ?? new DataView(b.buffer).getBigUint64(0)
     this.state_ = s & this.UINT64_MAX
   }
 
