@@ -109,7 +109,7 @@ export class SPD {
     this.generateLanes()
     this.shuffleLanes(d)
     this.transposeBuffer()
-    this.overwriteFewValuesInAllLanes(d)
+    this.shuffleLanes(d)
   }
 
   private bufferView() {
@@ -143,24 +143,6 @@ export class SPD {
     Iterator.from(this)
       .forEach((_, i) =>
         shuffleBuffer(this.bufferView().subarray(this.laneSize * i, this.laneSize * (i + 1)), d))
-  }
-
-  private overwriteFewValuesInAllLanes(d: UniformUint64) {
-    Iterator.from(this)
-      .forEach((_, i) => {
-        let laneBitSize = 0
-        for (let laneSizeMax = this.laneSize - 1; laneSizeMax > 0; laneSizeMax >>= 1, laneBitSize++);
-
-        const lane = this.bufferView().subarray(this.laneSize * i, this.laneSize * (i + 1))
-
-        Array.from({ length: Number(d.newUint([BigInt(this.laneSize / 2), BigInt(this.laneSize)])) }, () =>
-          Number(d.newUint([0n, BigInt(this.laneSize - 1)])))
-          .forEach((v, j) => {
-            while ((lane[j] === lane[v]) || (j === v))
-              v = (v + 1) % this.laneSize
-            lane[j] = lane[v]!
-          })
-      })
   }
 }
 

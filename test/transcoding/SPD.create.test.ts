@@ -83,20 +83,6 @@ describe('SPD test suite', () => {
         expect(maps.some(m => m.size < spd.laneSize)).toBeTrue()
       })
 
-    it.each(['low', 'high'])
-      ('should verify content properties for each lane having some missing and duplicated values', (spdType) => {
-        const spd = new SPD(spdType)
-
-        const n = spd.laneSize - 1
-        const notExpectedSum = spd.laneSize * (n * (n + 1)) / 2
-
-        const sum = Iterator.from(spd)
-          .map(it => it.reduce((acc, cur) => acc + cur, 0))
-          .reduce((acc, cur) => acc + cur, 0)
-
-        expect(notExpectedSum).not.toBe(sum)
-      })
-
     it.each([16, 255, 3000, 60_000, 120_000])
       ('should not be possible to create an SPD instance with incorrect sized buffer', (size) => {
         const b = Buffer.from(new ArrayBuffer(size))
