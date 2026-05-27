@@ -30,13 +30,12 @@ export const shuffleArray = <T>(array: Array<T>, distribution?: UniformUintDistr
 export const shuffleBuffer = (buffer: Buffer<ArrayBufferLike>, distribution?: UniformUintDistributionEngine<bigint>) =>
   shuffleStorage(buffer.byteLength, buffer, distribution)
 
+// NOTE: Regarding the H3 finding in cryptanalysis, using the Fisher-Yates
+// shuffle instead of the naive one to ensure uniform shuffle
 function shuffleStorage(length: number, storage: RandomAccessStorage, distribution?: UniformUintDistributionEngine<bigint>) {
-  Array
-    .from({ length }, () =>
-      Number((distribution ?? new UniformUint64DistributionEngine).newUint([0n, BigInt(length - 1)])))
-    .forEach((v, i) => {
-      const tmp = storage[i]!
-      storage[i] = storage[v]!
-      storage[v] = tmp
-    })
+  const d = distribution ?? new UniformUint64DistributionEngine
+  for (let i = length - 1; i > 0; i--) {
+    const j = Number(d.newUint([0n, BigInt(i)]))
+    const tmp = storage[i]; storage[i] = storage[j]; storage[j] = tmp
+  }
 }
