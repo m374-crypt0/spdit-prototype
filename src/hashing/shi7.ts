@@ -41,17 +41,19 @@ export class Shi7 {
     const randomByte = () => Number(d.newUint([0n, 255n]))
     const uniqueBytes = new Set<number>
 
-    while (uniqueBytes.size < 3) {
+    while (uniqueBytes.size < 4) {
       uniqueBytes.clear()
+      uniqueBytes.add(randomByte())
       uniqueBytes.add(randomByte())
       uniqueBytes.add(randomByte())
       uniqueBytes.add(randomByte())
     }
 
     return {
-      small: uniqueBytes.values().toArray()[0]!,
-      medium: uniqueBytes.values().toArray()[1]!,
-      big: uniqueBytes.values().toArray()[2]!
+      empty: uniqueBytes.values().toArray()[0]!,
+      small: uniqueBytes.values().toArray()[1]!,
+      medium: uniqueBytes.values().toArray()[2]!,
+      big: uniqueBytes.values().toArray()[3]!
     }
   }
 
@@ -63,7 +65,7 @@ export class Shi7 {
     if (this.emptyMessageHash !== undefined)
       return this.emptyMessageHash
 
-    const message = this.highSPD().readonlyBufferView()
+    const message = this.prefixDomainByteToMessage(this.domainPreludes.empty, this.highSPD().readonlyBufferView())
     const sizeInBytes = this.hashBitSize() / Shi7.BYTE_BITS
     const seedGenerator = new SplitMix64(this.seed_)
     const hashBuffer = this.decodeMessageUntilSizeInBytes(message, sizeInBytes, seedGenerator)
@@ -111,6 +113,10 @@ export class Shi7 {
     const hashBuffer = this.transcoder().decode(preHash)
 
     return BigInt(`0x${hashBuffer.toHex()}`)
+  }
+
+  private prefixDomainByteToMessage(domainByte: number, message: Readonly<Buffer<ArrayBuffer>>) {
+    return Buffer.from([domainByte, ...message])
   }
 
   private isMessageSmallerOrEqualToSeedSize(message: Readonly<Buffer<ArrayBuffer>>) {
@@ -218,6 +224,7 @@ type Options = {
 }
 
 type DomainPreludes = {
+  empty: number,
   small: number,
   medium: number,
   big: number
