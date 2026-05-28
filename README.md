@@ -8,11 +8,16 @@ information securely and privately by transcoding bytes through large,
 secret, stochastically-generated lookup tables called *SPDs* — rather than by
 applying the algebraic transformations that conventional cryptography relies on.
 
-The goal of SPDIT is to provide *information-theoretically secured* (ITS)
-primitives: primitives that remain secure even against an adversary with
+The goal of SPDIT is *at term* to provide *information-theoretically secured*
+(ITS) primitives: primitives that remain secure even against an adversary with
 unbounded computing resources and time. This puts it in a different category
 than quantum-resistant cryptography efforts that still depend on hardness
 assumptions.
+
+> [!NOTE]
+> The final goal is to tend to a system that is not susceptible to be broken by
+> known quantum algorithms. It is not yet the case. However, this demonstration
+> clearly paves the way to achieve this goal.
 
 For the precise meaning of terms like *SPD*, *high SPD*, *low SPD*,
 *transcoding*, *shi7*, *ITS*, see [`docs/glossary.md`](docs/glossary.md).
