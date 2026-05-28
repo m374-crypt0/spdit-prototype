@@ -33,25 +33,33 @@ model, what attacks does the construction admit?*
 
 ## 1. Executive summary
 
-| ID  | Severity   | Issue                                                                   |
-|-----|------------|-------------------------------------------------------------------------|
-| C1  | Critical   | Small-message hashes are exactly **half the advertised hashBitSize**    |
-| C2  | Critical   | Default seed has ≤52 bits of entropy from an insecure PRNG              |
-| H1  | High       | Seed/key space is 64 bits — defeats both ITS and post-Grover claims     |
-| H2  | High       | `preSeed` and `preHash` buffers alias for hashBitSize ≤ 128 small msgs  |
-| H3  | High       | `shuffleStorage` is the *naive* shuffle, not Fisher-Yates — biased      |
-| M1  | Medium     | SPD `overwriteFewValuesInAllLanes` destroys uniform distribution and admits a rare runtime crash |
-| M2  | Medium     | Decode is a 2→1 byte tree → narrow-pipe diffusion before the final shuffle |
-| M3  | Medium     | No domain separation between the four dispatch paths                    |
-| M4  | Medium     | "decoded-message vs message" collision avoidance is a structural patch, not an invariant |
-| L1  | Low        | Empty-message hash can be `-1n` (all-zero `hashBuffer`)                 |
-| L2  | Low        | `hashMessageSizedBetweenSeedAndHash` is unreachable when hashBitSize=64 |
-| L3  | Low        | Empty-message hash depends only on the high SPD, not on the SplitMix64 seedGenerator chain |
+| ID  | Severity   | Issue                                                                   | Status (2026-05-28)                                     |
+|-----|------------|-------------------------------------------------------------------------|---------------------------------------------------------|
+| C1  | Critical   | Small-message hashes are exactly **half the advertised hashBitSize**    | **Fixed** (`f6b9102`)                                   |
+| C2  | Critical   | Default seed has ≤52 bits of entropy from an insecure PRNG              | **Fixed** (`318e426`)                                   |
+| H1  | High       | Seed/key space is 64 bits — defeats both ITS and post-Grover claims     | **Open** (structural); marketing claims withdrawn (`f35507a`) |
+| H2  | High       | `preSeed` and `preHash` buffers alias for hashBitSize ≤ 128 small msgs  | **Fixed implicitly via C1** for hashBitSize ≥ 128; still present at hashBitSize=64 |
+| H3  | High       | `shuffleStorage` is the *naive* shuffle, not Fisher-Yates — biased      | **Fixed** (`d033a50`)                                   |
+| M1  | Medium     | SPD `overwriteFewValuesInAllLanes` destroys uniform distribution and admits a rare runtime crash | **Fixed by removal** (`edefb7a`)         |
+| M2  | Medium     | Decode is a 2→1 byte tree → narrow-pipe diffusion before the final shuffle | **Open**                                             |
+| M3  | Medium     | No domain separation between the four dispatch paths                    | **Fixed** (`75a93ef` → `270b416`); stronger than recommended (keyed tags) |
+| M4  | Medium     | "decoded-message vs message" collision avoidance is a structural patch, not an invariant | **Strengthened by M3 fix**; seed-burn patches retained |
+| L1  | Low        | Empty-message hash can be `-1n` (all-zero `hashBuffer`)                 | **Fixed** (during M3 work)                              |
+| L2  | Low        | `hashMessageSizedBetweenSeedAndHash` is unreachable when hashBitSize=64 | **Open**                                                |
+| L3  | Low        | Empty-message hash depends only on the high SPD, not on the SplitMix64 seedGenerator chain | **Fixed** (during M3 work)                |
 
 The two Critical items are both reproducible with one-shot probes (see §3).
 The High items are structural and would need redesign to address. The Medium
 items concern the *quality* of diffusion and the surface for principled
 analysis. The Low items are mostly cosmetic.
+
+**Update (2026-05-28).** Of the 12 findings, 8 are fixed in the codebase, 1
+is partially addressed (H2 — fully fixed for hashBitSize ≥ 128, still
+present at hashBitSize=64), 1 is meaningfully strengthened (M4), and 2
+remain open (M2, L2). H1 is open structurally but had its security claims
+withdrawn from the README. Per-finding status notes are inline in §3
+below; the priority order in §7 has been updated; a fix-commit summary is
+in §8.
 
 ## 2. Methodology and scope
 
@@ -80,7 +88,15 @@ These would all be valuable next steps.
 
 ## 3. Detailed findings
 
-### C1 — Small-message output is half the advertised `hashBitSize` *(verified)*
+### C1 — Small-message output is half the advertised `hashBitSize` *(verified — **fixed** in commit `f6b9102`)*
+
+> **Status (2026-05-28).** Fixed in commit `f6b9102 fix(hashing): C1 findings
+> in automated cryptanalysis`. The recommended one-line change was applied:
+> `encodePreSeedToPreHash` (now at `src/hashing/shi7.ts:142`) grows `preHash`
+> to `hashBitSize/8 * SPD.DIMENSIONAL_FACTOR` bytes before the final decode,
+> so the returned `hashBuffer` is `hashBitSize/8` bytes as intended. Reproduce
+> by re-running the empirical probe described below — all rows should now
+> read `OK`.
 
 **Where:** `src/hashing/shi7.ts` `encodePreSeedToPreHash` (around line 117).
 
@@ -131,7 +147,12 @@ you thought you had.
 
 ---
 
-### C2 — Default seed has ≤52 bits of entropy from a non-cryptographic PRNG *(verified)*
+### C2 — Default seed has ≤52 bits of entropy from a non-cryptographic PRNG *(verified — **fixed** in commit `318e426`)*
+
+> **Status (2026-05-28).** Fixed in commit `318e426 fix(hashing): C2
+> findings`. The `SplitMix64` constructor (`src/stochastic/seedGenerators.ts:33`)
+> now sources its default state from `randomBytes(8)` (Node's CSPRNG via
+> `node:crypto`) and interprets it via `new DataView(b.buffer).getBigUint64(0)`.
 
 **Where:** `src/stochastic/seedGenerators.ts` `SplitMix64` constructor:
 
@@ -178,7 +199,16 @@ This change is mechanical, ~3 lines.
 
 ---
 
-### H1 — 64-bit seed/key space defeats both ITS and post-Grover claims *(static)*
+### H1 — 64-bit seed/key space defeats both ITS and post-Grover claims *(static — **open**; documentation claims withdrawn)*
+
+> **Status (2026-05-28).** Structurally unchanged — the seed is still 64 bits
+> wide throughout. The conservative half of the response landed: commit
+> `f35507a docs: do not overclaim ITS and quntum resistance anymore`
+> withdrew the ITS and quantum-resistance claims from the README. The
+> architectural decision — widen the PRNG stack (e.g. `xoshiro256**`) or
+> treat the high SPD itself as the key — remains open and is the biggest
+> design call before the C++ port. Tracked as such in
+> `.claude/context/project-state.md`.
 
 **Where:** the seed is a `bigint`, masked to 64 bits everywhere
 (`SplitMix64`, `Xoroshiro128+`, the SPD constructor, `Transcoder` encoding
@@ -222,7 +252,18 @@ This is the **single biggest design question** for the C++ port, in my view.
 
 ---
 
-### H2 — `preSeed` and `preHash` buffer aliasing for small messages, hashBitSize ≤ 128 *(static, with verified-adjacent evidence from C1)*
+### H2 — `preSeed` and `preHash` buffer aliasing for small messages, hashBitSize ≤ 128 *(static — **fixed implicitly via C1** for hashBitSize ≥ 128; residual case at hashBitSize=64)*
+
+> **Status (2026-05-28).** Resolved for hashBitSize ∈ {128, 256, 512, 1024}.
+> The C1 fix grows `preHash` to `hashBitSize/8 * DIMENSIONAL_FACTOR` bytes
+> via at least one call to `transcoder().encode(...)`, which returns a
+> fresh buffer — so `preHash !== preSeed` after the first iteration.
+> Residual case: at hashBitSize=64 the target size is `8 * 2 = 16` bytes,
+> which equals the `preSeedSize`, so the loop in `encodePreSeedToPreHash`
+> still does not iterate and `preHash === preSeed`. This dovetails with
+> L2 (the "between seed and hash" path is also dead at hashBitSize=64) —
+> the cleanest resolution is to remove `64` from the `HashBitSize` type
+> union.
 
 **Where:** `hashSmallerThanSeedMessage` calls
 `encodePreSeedToPreHash(preSeed, ...)`. For hashBitSize ∈ {64, 128} the
@@ -261,7 +302,13 @@ Alternatively, guarantee a `preHash !== preSeed` invariant explicitly.
 
 ---
 
-### H3 — `shuffleStorage` is the *naive shuffle*, not Fisher-Yates *(static)*
+### H3 — `shuffleStorage` is the *naive shuffle*, not Fisher-Yates *(static — **fixed** in commit `d033a50`)*
+
+> **Status (2026-05-28).** Fixed in commit `d033a50 fix(hashing): H3 finding`.
+> `shuffleStorage` (`src/stochastic/utils.ts:35`) is now proper Fisher-Yates:
+> `for (let i = length - 1; i > 0; i--)` with `d.newUint([0n, BigInt(i)])`.
+> A `// NOTE: Regarding the H3 finding in cryptanalysis…` comment at line 33
+> cites the finding by ID so a future refactor doesn't accidentally regress.
 
 **Where:** `src/stochastic/utils.ts`:
 
@@ -315,7 +362,23 @@ The change is also one-shot and small.
 
 ---
 
-### M1 — `overwriteFewValuesInAllLanes` destroys uniform value distribution; can crash *(static)*
+### M1 — `overwriteFewValuesInAllLanes` destroys uniform value distribution; can crash *(static — **fixed by removal** in commit `edefb7a`)*
+
+> **Status (2026-05-28).** Fixed in commit `edefb7a fix(hashing): addressing
+> M1` ("removing the non-uniformity step that could cause in rare cases
+> crashes. Mixing is already strong but should nonetheless be assessed").
+> `overwriteFewValuesInAllLanes` was deleted entirely.
+> `SPD.initializeBuffer` (`src/transcoding/spd.ts:105`) is now
+> `generateLanes → shuffleLanes → transposeBuffer → shuffleLanes` — the
+> deleted non-uniformity step has been replaced with a second uniform
+> `shuffleLanes` pass after the transpose. This is **stronger** than the
+> "drop the function" option recommended below: where the recommendation
+> would have left a single horizontal shuffle, the implemented design
+> performs a horizontal shuffle on each side of the transpose, providing
+> additional cross-lane mixing. The commit message's note "should
+> nonetheless be assessed" is accurate — the construction is sounder but
+> hasn't been empirically validated against the diffusion measurements
+> the original test suite expected.
 
 **Where:** `src/transcoding/spd.ts`:
 
@@ -387,7 +450,15 @@ the SPD.
 
 ---
 
-### M2 — Decoding is a 2→1 byte tree → narrow-pipe before the final shuffle *(static)*
+### M2 — Decoding is a 2→1 byte tree → narrow-pipe before the final shuffle *(static — **open**)*
+
+> **Status (2026-05-28).** Unchanged. The decode step is still
+> `2 bytes → 1 byte` per round, with no inter-round mixing. Per §7 this
+> "probably can't be fixed without giving up the fast lookup-only design"
+> — the suggested next step is to run the experiment in §4.7 (count
+> distinct intermediate buffers after the first decode round across ~10⁶
+> random 32-byte messages) to quantify how narrow the pipe actually is in
+> practice. The experiment has not been run.
 
 **Where:** `decodeMessageUntilSizeInBytes` performs a chain of `decode`
 calls. Each `decode` step is `2 bytes → 1 byte` via the high SPD lookup.
@@ -434,7 +505,23 @@ absorption between decodes). At the cost of speed.
 
 ---
 
-### M3 — No domain separation between dispatch paths *(static)*
+### M3 — No domain separation between dispatch paths *(static — **fixed** in commits `75a93ef` → `270b416`; stronger than recommended)*
+
+> **Status (2026-05-28).** Fixed across a four-commit sequence: `75a93ef
+> fix(hashing): M3 domain separation`, `25b059f`, `d1c6d9a`, and `270b416
+> fix(hashing): M3 finalized`. The implementation is **stronger than the
+> static byte tags (0x00/0x01/0x02/0x03) recommended below**:
+> `Shi7.initializeDomainPreludes` (`src/hashing/shi7.ts:39-58`) derives
+> **four unique random bytes from the seed itself** (via the
+> `SplitMix64 → Xoroshiro128+ → UniformUint64` chain), and
+> `prefixDomainByteToMessage` (`shi7.ts:121`) prepends the path-specific
+> byte before each path runs. Because the tags are derived from the
+> (potentially secret) seed, this is a *keyed* domain separation —
+> an adversary who doesn't know the seed doesn't know the tags, so they
+> cannot construct cross-path collisions by tag manipulation. The
+> generation loop rejects until all four tags are distinct, ensuring no
+> accidental tag overlap between paths. Side effect: L1 and L3 were
+> resolved during this work (see below).
 
 **Where:** `Shi7.hash` dispatches to four different code paths
 (`hashEmptyMessage`, `hashSmallerThanSeedMessage`,
@@ -462,7 +549,18 @@ of attack.
 
 ---
 
-### M4 — "decoded(M) vs M" collision avoidance is a structural patch, not an invariant *(static)*
+### M4 — "decoded(M) vs M" collision avoidance is a structural patch, not an invariant *(static — **strengthened by M3 fix**; seed-burn patches retained)*
+
+> **Status (2026-05-28).** No direct M4 commit, but the M3 keyed-tag domain
+> separation substantially weakens M4's premise: messages flowing through
+> the four paths now carry distinct seed-derived prelude bytes, so
+> `hash(M)` and `hash(decoded(M))` enter the construction with different
+> domain context as well as different post-prelude content. The
+> `seedGenerator.newSeed()` calls flagged in this finding remain in place
+> (`src/hashing/shi7.ts:158` and `src/hashing/shi7.ts:168`) — they are
+> no longer the *only* defense, but they remain part of the construction
+> and the `// NOTE:` comments documenting them are still load-bearing. Do
+> not remove them in refactoring.
 
 **Where:** `decodeMessageUntilSizeInBytes`:
 
@@ -503,7 +601,17 @@ for distinct messages is stronger than one that *happens not to*.
 
 ---
 
-### L1 — Empty-message hash can be `-1n` *(static)*
+### L1 — Empty-message hash can be `-1n` *(static — **fixed** in commit `25b059f`)*
+
+> **Status (2026-05-28).** Fixed in commit `25b059f fix(hashing): M3
+> addressing` — the commit message explicitly notes "Removed the magic
+> subtraction". `hashEmptyMessage` at `src/hashing/shi7.ts:73` now returns
+> `BigInt(\`0x${hashBuffer.toHex()}\`)` directly, which is always
+> non-negative. The collision concern that originally motivated the `- 1n`
+> patch is now addressed by the M3 keyed domain separation: the empty
+> path prepends a unique seed-derived byte before processing, so the
+> empty-message hash can no longer coincide with
+> `BigInt(decode_chain(highSPD).toHex())` by construction.
 
 **Where:** `hashEmptyMessage`:
 
@@ -532,7 +640,15 @@ separation (M3). Alternatively, mask: `... & ((1n << BigInt(hashBitSize)) - 1n)`
 
 ---
 
-### L2 — `hashMessageSizedBetweenSeedAndHash` unreachable for hashBitSize=64 *(static)*
+### L2 — `hashMessageSizedBetweenSeedAndHash` unreachable for hashBitSize=64 *(static — **open**)*
+
+> **Status (2026-05-28).** Unchanged. `type HashBitSize = 64 | 128 | 256 | 512 | 1024`
+> (`src/hashing/shi7.ts:222`) still permits `64`, and the dispatch math
+> still leaves the "between seed and hash" path unreachable at that size.
+> Newly: at hashBitSize=64 this also produces the residual H2 buffer
+> aliasing (see above). The cleanest single fix is to remove `64` from
+> the type union — closing both L2 and the H2 residual in one change.
+> 64-bit hashes are below modern minimums anyway.
 
 For hashBitSize=64, `hashBitSize/8 = 8 = SEED_SIZE`. The condition
 `message.byteLength <= 8` catches messages of length 8, and
@@ -551,7 +667,19 @@ size-threshold dispatch entirely.
 
 ---
 
-### L3 — Empty-message hash depends only on the high SPD, never on the SplitMix64 chain *(static)*
+### L3 — Empty-message hash depends only on the high SPD, never on the SplitMix64 chain *(static — **fixed** in commit `25b059f`)*
+
+> **Status (2026-05-28).** Fixed in commit `25b059f fix(hashing): M3
+> addressing` — the commit message notes "made the hashing of empty value
+> similar to big message hashing with key differences to distinct hash of
+> empty value of the hash of underlying high SPD".
+> `hashEmptyMessage` (`src/hashing/shi7.ts:64-74`) now constructs its own
+> `seedGenerator = new SplitMix64(this.seed_)` and passes it to
+> `decodeMessageUntilSizeInBytes`, which consumes `newSeed()` per decode
+> round (and additionally for odd-sized inputs). The empty hash now
+> depends on the SplitMix64 chain in the same way the other paths do.
+> The structure described below — `simpleChainDecodeMessageUntilSizeInBytes`
+> with no seed generator — was replaced as part of this commit.
 
 `hashEmptyMessage` calls `decodeUnderlyingHighSPDToHash`, which uses
 `simpleChainDecodeMessageUntilSizeInBytes` — that helper does **not**
@@ -667,30 +795,78 @@ For honesty's sake, here is what this review **did not** cover:
 
 ## 7. Recommended priority order
 
-If I had to rank fixes by value-per-effort:
+The original priority order, annotated with status:
 
-1. **Fix C1** (small-message output width). 1-line change, removes a
-   2^64× security overstatement.
-2. **Fix C2** (default seed via CSPRNG). 3-line change, removes a
-   trivial seed-guessing path.
-3. **Fix H3** (Fisher-Yates shuffle). ~8-line change, removes a
-   biased primitive used everywhere in the construction.
-4. **Add domain separation** (M3) and drop the `- 1n` empty patch (L1).
-   ~5 lines, eliminates an entire family of cross-path attacks.
-5. **Decide on H1** (seed width). The biggest architectural call. If
-   shi7 stays at 64 bits, drop the ITS/quantum-immune claims from the
-   README. If the claims stay, widen the key.
-6. **Reconsider M1** (SPD value uniformity). Either drop
-   `overwriteFewValuesInAllLanes` or document its purpose formally.
+1. ~~**Fix C1** (small-message output width). 1-line change, removes a
+   2^64× security overstatement.~~ — **Done** (`f6b9102`).
+2. ~~**Fix C2** (default seed via CSPRNG). 3-line change, removes a
+   trivial seed-guessing path.~~ — **Done** (`318e426`).
+3. ~~**Fix H3** (Fisher-Yates shuffle). ~8-line change, removes a
+   biased primitive used everywhere in the construction.~~ —
+   **Done** (`d033a50`).
+4. ~~**Add domain separation** (M3) and drop the `- 1n` empty patch (L1).
+   ~5 lines, eliminates an entire family of cross-path attacks.~~ —
+   **Done** (`75a93ef` → `270b416`), with a *stronger* construction
+   than originally recommended: keyed (seed-derived) domain tags
+   rather than fixed `0x00..0x03` bytes. L1 and L3 closed as side
+   effects.
+5. **Decide on H1** (seed width). The biggest architectural call. —
+   **Open**. The conservative half was done: ITS/quantum-immune claims
+   were withdrawn from the README in `f35507a`. The structural choice
+   (widen the PRNG stack, e.g. `xoshiro256**`, or treat the high SPD as
+   the key) is either deferred to the C++ port or for further researches in
+  this prototype
+6. ~~**Reconsider M1** (SPD value uniformity). Either drop
+   `overwriteFewValuesInAllLanes` or document its purpose formally.~~
+   — **Done by removal** (`edefb7a`). The non-uniformity step was
+   deleted; SPD init now does a second `shuffleLanes` after the
+   transpose. Stronger than the "just drop it" option.
 7. **Reconsider M2** (decode tree topology). Probably can't be fixed
    without giving up the fast lookup-only design — but at least
    measure how bad it actually is in practice (see §4.7 suggested
-   experiment).
+   experiment). — **Open**. The experiment has not been run.
 8. **Add the missing tests** in §4 to the suite as guardrails for the
-   C++ port.
+   C++ port. — **Open**. The §4 gaps remain.
 
-Items 1–4 are mechanical and would land in an afternoon. Items 5–8 are
-the substance of a v2 design.
+Items 1–4 and 6 have all landed. Items 5, 7, and 8 are the substance
+of a v2 design and remain open. The minor L2/H2-residual cleanup
+(remove `64` from the `HashBitSize` union) was not on the original
+priority list and is also still open.
+
+## 8. Update log
+
+A summary of the fix cluster that addressed this report (oldest to
+newest):
+
+| Commit     | Finding(s) addressed                  | Notes                                                                                                              |
+|------------|---------------------------------------|--------------------------------------------------------------------------------------------------------------------|
+| `f6b9102`  | C1                                    | Mechanical fix as recommended.                                                                                     |
+| `318e426`  | C2                                    | Mechanical fix as recommended. JSDoc in `seedGenerators.ts:30` still says "Math.random" — cosmetic followup.       |
+| `d033a50`  | H3                                    | Mechanical fix; `// NOTE: Regarding the H3 finding…` comment added in `utils.ts:33` for regression-resistance.     |
+| `edefb7a`  | M1                                    | Fixed by deletion; second `shuffleLanes` after the transpose replaces the removed step as compensating mixing.     |
+| `70eeeb8`  | (refactor) precursor to M3            | Introduced `initializeDomainMagicBytes` / `domainMagicBytes` — the infrastructure for keyed domain separation. Empty-path still used `- 1n` after this commit. |
+| `75a93ef`  | M3 (initial)                          | First pass at domain separation using the magic-bytes infrastructure.                                              |
+| `25b059f`  | M3 (iteration), **L1**, **L3**        | Commit message: "Removed the magic subtraction" (L1) and "made the hashing of empty value similar to big message hashing" (L3). Both Lows closed here. |
+| `d1c6d9a`  | M3 (iteration)                        | Subsequent refinement of domain separation.                                                                        |
+| `270b416`  | M3 (finalized)                        | Final domain-separation design: `initializeDomainPreludes` produces 4 unique seed-derived tags. Side effect: H2 (≥128-bit) and M4 substantially strengthened. |
+| `f35507a`  | H1 (documentation only)               | Withdrew ITS / quantum-immune marketing claims from the README. Structural H1 fix deferred.                        |
+
+**Open findings as of 2026-05-28:**
+
+- **H1** — structural; the 64-bit seed-width decision is the biggest
+  call before the C++ port.
+- **H2 (residual)** — the buffer-aliasing case at `hashBitSize=64`
+  still applies (the C1 fix didn't reach that size).
+- **M2** — narrow-pipe decode tree; requires architectural change.
+- **L2** — dead "between seed and hash" path at `hashBitSize=64`.
+- **§4 test gaps** — particularly: output bit-width assertion,
+  cross-path collision tests, statistical batteries (NIST / dieharder /
+  PractRand), worst-case (not mean) diffusion, key-recovery
+  consistency tests, edge-size boundary tests, SPD value-presence
+  test.
+
+The H2-residual and L2 issues both vanish if `64` is removed from the
+`HashBitSize` union — a one-line change with no other consequences.
 
 ---
 
@@ -699,3 +875,14 @@ trained cryptographer. Take this document as a useful next-pair-of-eyes
 pass; have a real cryptanalyst look before claiming security. In
 particular, formal arguments — the kind that would back up an ITS or
 quantum-resistance claim — are out of scope here.*
+
+*Update note (2026-05-28): the status annotations and §8 update log
+were added after the original report, by another language-model pass
+that cross-checked each finding against the current codebase and the
+intervening commit cluster. The original analysis text is preserved in
+§3 for traceability; only the per-finding headings and the indented
+status blocks at the top of each section are additions. Verify before
+acting on any specific claim — particularly the residual-H2 case at
+hashBitSize=64 (which the C1 fix did not reach), and the M4
+"strengthened" framing (no direct M4 commit; the strengthening comes
+indirectly from the M3 keyed-tag construction).*

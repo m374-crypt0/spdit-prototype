@@ -27,8 +27,8 @@ export class SplitMix64 implements SeedGenerator<bigint> {
    * Constructs a new instance of the seed generator using an optional user
    * provided state.
    * @param [state=undefined] If provided, use this state as initial state of
-   * the seed generator. If not provided, create a state from the Math.random
-   * built-in fitting into a 64 bits sized unsigned integer
+   * the seed generator. If not provided, create a state from randomBytes in
+   * the crypto package fitting into a 64 bits sized unsigned integer
    */
   constructor(state?: bigint) {
     const b = randomBytes(8)
