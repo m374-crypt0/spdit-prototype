@@ -3,6 +3,18 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with
 code in this repository.
 
+## Before you start: session context
+
+Durable context from prior Claude Code sessions lives in
+[`.claude/context/`](./.claude/context/) — author profile, working
+preferences, project-state notes, external references, and design-decision
+rationale that isn't otherwise visible from the code or git history. Read
+[`.claude/context/README.md`](./.claude/context/README.md) first; it tells
+you which file to consult for which kind of work. The contents complement
+this file rather than duplicating it. If a memory there conflicts with the
+current code or with this file, the code and this file win — and the
+context file is stale and should be updated or deleted.
+
 ## Project purpose
 
 Prototype of **SPDIT** (Stochastic Private Dimensional Information Transcoding)
