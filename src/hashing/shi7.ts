@@ -63,11 +63,12 @@ export class Shi7 {
     if (this.emptyMessageHash !== undefined)
       return this.emptyMessageHash
 
-    const hashBuffer =
-      this.simpleChainDecodeMessageUntilSizeInBytes(this.transcoder().highSPD().readonlyBufferView(),
-        this.hashBitSize() / Shi7.BYTE_BITS)
+    const message = this.highSPD().readonlyBufferView()
+    const sizeInBytes = this.hashBitSize() / Shi7.BYTE_BITS
+    const seedGenerator = new SplitMix64(this.seed_)
+    const hashBuffer = this.decodeMessageUntilSizeInBytes(message, sizeInBytes, seedGenerator)
 
-    return this.emptyMessageHash = BigInt(`0x${hashBuffer.toHex()}`) - 1n
+    return this.emptyMessageHash = BigInt(`0x${hashBuffer.toHex()}`)
   }
 
   private hashSmallerThanSeedMessage(message: Readonly<Buffer<ArrayBuffer>>) {
