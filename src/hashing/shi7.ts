@@ -8,6 +8,7 @@ export class Shi7 {
       : new SplitMix64().state()
 
     this.hashBitSize_ = options?.hashBitSize ?? 256
+    this.domainPreludes = this.initializeDomainPreludes()
   }
 
   hashBitSize() {
@@ -33,6 +34,25 @@ export class Shi7 {
       return this.hashBiggerThanHashMessage(message)
 
     return this.hashMessageSizedBetweenSeedAndHash(message)
+  }
+
+  initializeDomainPreludes(): DomainPreludes {
+    const d = new UniformUint64(new Xoroshiro128Plus(new SplitMix64(this.seed_)))
+    const randomByte = () => Number(d.newUint([0n, 255n]))
+    const uniqueBytes = new Set<number>
+
+    while (uniqueBytes.size < 3) {
+      uniqueBytes.clear()
+      uniqueBytes.add(randomByte())
+      uniqueBytes.add(randomByte())
+      uniqueBytes.add(randomByte())
+    }
+
+    return {
+      small: uniqueBytes.values().toArray()[0]!,
+      medium: uniqueBytes.values().toArray()[1]!,
+      big: uniqueBytes.values().toArray()[2]!
+    }
   }
 
   private highSPD(): Readonly<SPD> {
@@ -178,27 +198,12 @@ export class Shi7 {
     return newBuffer
   }
 
-  private initializeDomainMagicBytes() {
-    const seedGenerator = new SplitMix64(this.seed_)
-    const d = new UniformUint64(new Xoroshiro128Plus(seedGenerator))
-    const s = new Set<number>
-
-    while (s.size < DomainIndices.last) {
-      s.clear()
-
-      for (let i = 0; i < DomainIndices.last; i++)
-        s.add(Number(d.newUint([0n, 255n])))
-    }
-
-    return s.values().toArray() as [number, number, number, number]
-  }
-
   private seed_: bigint
   private hashBitSize_: HashBitSize
   private highSPD_?: SPD
   private emptyMessageHash?: bigint
   private transcoder_?: Transcoder
-  private domainMagicBytes: Readonly<[number, number, number, number]> = this.initializeDomainMagicBytes()
+  private domainPreludes: DomainPreludes
 
   private static SEED_SIZE = 8 as const
   private static BYTE_BITS = 8 as const
@@ -211,10 +216,8 @@ type Options = {
   hashBitSize?: HashBitSize
 }
 
-enum DomainIndices {
-  empty,
-  small,
-  medium,
-  big,
-  last
+type DomainPreludes = {
+  small: number,
+  medium: number,
+  big: number
 }
