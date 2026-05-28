@@ -1,3 +1,3 @@
-import { Shi7 } from './shi7'
+import { Shi7, type SupportedHashBitSize } from './shi7'
 
-export { Shi7 }
+export { Shi7, type SupportedHashBitSize }

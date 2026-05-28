@@ -209,7 +209,7 @@ export class Shi7 {
   }
 
   private seed_: bigint
-  private hashBitSize_: HashBitSize
+  private hashBitSize_: SupportedHashBitSize
   private highSPD_?: SPD
   private emptyMessageHash?: bigint
   private transcoder_?: Transcoder
@@ -219,11 +219,11 @@ export class Shi7 {
   private static BYTE_BITS = 8 as const
 }
 
-type HashBitSize = 64 | 128 | 256 | 512 | 1024
+export type SupportedHashBitSize = 128 | 256 | 512 | 1024
 
 type Options = {
   seed?: bigint,
-  hashBitSize?: HashBitSize
+  hashBitSize?: SupportedHashBitSize
 }
 
 type DomainPreludes = {

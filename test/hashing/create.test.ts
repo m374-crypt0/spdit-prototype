@@ -1,4 +1,4 @@
-import { Shi7 } from "src/hashing";
+import { Shi7, type SupportedHashBitSize } from "src/hashing";
 import { SplitMix64, } from "src/stochastic";
 import { SPD, Transcoder } from "src/transcoding";
 
@@ -7,6 +7,8 @@ import { bigintToBuffer, bitwiseDiffusion, generateRandomUniqueMessages, generat
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 
 describe('hashing test suite', () => {
+  const supportedHashBitSizes: SupportedHashBitSize[] = [128, 256, 512, 1024]
+
   describe('shi7 instantiation', () => {
     it('should default instantiate shi7 with 256 hash bit size and random seed', () => {
       const hasher = new Shi7
@@ -23,9 +25,9 @@ describe('hashing test suite', () => {
     })
 
     it('should be instantiated with a specific hash bit size and a random seed', () => {
-      const hasher = new Shi7({ hashBitSize: 64 })
+      const hasher = new Shi7({ hashBitSize: 128 })
 
-      expect(hasher.hashBitSize()).toBe(64)
+      expect(hasher.hashBitSize()).toBe(128)
       expect(hasher.seed()).toBeDefined()
     })
 
@@ -39,7 +41,7 @@ describe('hashing test suite', () => {
     })
   })
 
-  describe.each([64, 128, 256, 512, 1024])
+  describe.each(supportedHashBitSizes)
     ('hashing empty message', hashBitSize => {
       const empty = Buffer.from(new ArrayBuffer(0))
 
@@ -134,7 +136,7 @@ describe('hashing test suite', () => {
       })
     })
 
-  describe.each([64, 128, 256, 512, 1024])
+  describe.each(supportedHashBitSizes)
     ('hashing small messages in regard of hash bit size', hashBitSize => {
       it.each(generateSeeds(10))
         ('should give different hashes for the same message hashed with different seeds', seed => {
@@ -276,7 +278,7 @@ describe('hashing test suite', () => {
       console.log(`>> ${totalSize} bytes of big messages are generated!`)
     })
 
-    describe.each([64, 128, 256, 512, 1024])
+    describe.each(supportedHashBitSizes)
       ('for each hashBitSize', hashBitSize => {
         it.each(generateSeeds(10))
           ('should give different hashes for the same message hashed with different seeds', () => {
@@ -337,7 +339,7 @@ describe('hashing test suite', () => {
         })
       })
 
-    describe.each([64, 128, 256, 512, 1024])
+    describe.each(supportedHashBitSizes)
       ('diffusion properties', hashBitSize => {
         describe('unrelated pre-images', () => {
           it('ensure diffusionMean is between 0.45 and 0.55', () => {
