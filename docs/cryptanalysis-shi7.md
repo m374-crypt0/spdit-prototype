@@ -38,14 +38,14 @@ model, what attacks does the construction admit?*
 | C1  | Critical   | Small-message hashes are exactly **half the advertised hashBitSize**    | **Fixed** (`f6b9102`)                                   |
 | C2  | Critical   | Default seed has ≤52 bits of entropy from an insecure PRNG              | **Fixed** (`318e426`)                                   |
 | H1  | High       | Seed/key space is 64 bits — defeats both ITS and post-Grover claims     | **Open** (structural); marketing claims withdrawn (`f35507a`) |
-| H2  | High       | `preSeed` and `preHash` buffers alias for hashBitSize ≤ 128 small msgs  | **Fixed implicitly via C1** for hashBitSize ≥ 128; still present at hashBitSize=64 |
+| H2  | High       | `preSeed` and `preHash` buffers alias for hashBitSize ≤ 128 small msgs  | **Fixed** (`f6b9102` for ≥128; `db81a40` removed the residual 64-bit case) |
 | H3  | High       | `shuffleStorage` is the *naive* shuffle, not Fisher-Yates — biased      | **Fixed** (`d033a50`)                                   |
 | M1  | Medium     | SPD `overwriteFewValuesInAllLanes` destroys uniform distribution and admits a rare runtime crash | **Fixed by removal** (`edefb7a`)         |
-| M2  | Medium     | Decode is a 2→1 byte tree → narrow-pipe diffusion before the final shuffle | **Open**                                             |
+| M2  | Medium     | Decode is a 2→1 byte tree → narrow-pipe diffusion before the final shuffle | **Mitigated** (`db81a40`); wide-pipe now guaranteed, decode-tree topology unchanged |
 | M3  | Medium     | No domain separation between the four dispatch paths                    | **Fixed** (`75a93ef` → `270b416`); stronger than recommended (keyed tags) |
 | M4  | Medium     | "decoded-message vs message" collision avoidance is a structural patch, not an invariant | **Strengthened by M3 fix**; seed-burn patches retained |
 | L1  | Low        | Empty-message hash can be `-1n` (all-zero `hashBuffer`)                 | **Fixed** (during M3 work)                              |
-| L2  | Low        | `hashMessageSizedBetweenSeedAndHash` is unreachable when hashBitSize=64 | **Open**                                                |
+| L2  | Low        | `hashMessageSizedBetweenSeedAndHash` is unreachable when hashBitSize=64 | **Fixed** (`db81a40` — 64 removed from `SupportedHashBitSize`) |
 | L3  | Low        | Empty-message hash depends only on the high SPD, not on the SplitMix64 seedGenerator chain | **Fixed** (during M3 work)                |
 
 The two Critical items are both reproducible with one-shot probes (see §3).
@@ -53,13 +53,14 @@ The High items are structural and would need redesign to address. The Medium
 items concern the *quality* of diffusion and the surface for principled
 analysis. The Low items are mostly cosmetic.
 
-**Update (2026-05-28).** Of the 12 findings, 8 are fixed in the codebase, 1
-is partially addressed (H2 — fully fixed for hashBitSize ≥ 128, still
-present at hashBitSize=64), 1 is meaningfully strengthened (M4), and 2
-remain open (M2, L2). H1 is open structurally but had its security claims
-withdrawn from the README. Per-finding status notes are inline in §3
-below; the priority order in §7 has been updated; a fix-commit summary is
-in §8.
+**Update (2026-05-28).** Of the 12 findings, 10 are fixed in the codebase
+(L2 and the residual H2 case closed by `db81a40`, removing `64` from the
+supported hash bit sizes), 1 is mitigated (M2 — wide-pipe construction now
+guaranteed at every supported hash size, though the decode-tree topology
+itself is unchanged), 1 is meaningfully strengthened (M4). H1 is open
+structurally but had its security claims withdrawn from the README.
+Per-finding status notes are inline in §3 below; the priority order in §7
+has been updated; a fix-commit summary is in §8.
 
 ## 2. Methodology and scope
 
@@ -252,18 +253,18 @@ This is the **single biggest design question** for the C++ port, in my view.
 
 ---
 
-### H2 — `preSeed` and `preHash` buffer aliasing for small messages, hashBitSize ≤ 128 *(static — **fixed implicitly via C1** for hashBitSize ≥ 128; residual case at hashBitSize=64)*
+### H2 — `preSeed` and `preHash` buffer aliasing for small messages, hashBitSize ≤ 128 *(static — **fixed**; ≥128 case via `f6b9102`, residual 64-bit case via `db81a40`)*
 
-> **Status (2026-05-28).** Resolved for hashBitSize ∈ {128, 256, 512, 1024}.
-> The C1 fix grows `preHash` to `hashBitSize/8 * DIMENSIONAL_FACTOR` bytes
-> via at least one call to `transcoder().encode(...)`, which returns a
-> fresh buffer — so `preHash !== preSeed` after the first iteration.
-> Residual case: at hashBitSize=64 the target size is `8 * 2 = 16` bytes,
-> which equals the `preSeedSize`, so the loop in `encodePreSeedToPreHash`
-> still does not iterate and `preHash === preSeed`. This dovetails with
-> L2 (the "between seed and hash" path is also dead at hashBitSize=64) —
-> the cleanest resolution is to remove `64` from the `HashBitSize` type
-> union.
+> **Status (2026-05-28).** Fully resolved. For hashBitSize ∈ {128, 256, 512,
+> 1024} the C1 fix (`f6b9102`) grows `preHash` to
+> `hashBitSize/8 * DIMENSIONAL_FACTOR` bytes via at least one call to
+> `transcoder().encode(...)`, which returns a fresh buffer — so
+> `preHash !== preSeed` after the first iteration. The residual case at
+> hashBitSize=64 was closed by `db81a40 fix(hashing): cryptanalysis issues
+> addressed` which removed `64` from the supported hash bit sizes
+> altogether (the type was renamed `HashBitSize` → `SupportedHashBitSize`
+> at `src/hashing/shi7.ts:222` and now reads `128 | 256 | 512 | 1024`). The
+> same change closes L2 below.
 
 **Where:** `hashSmallerThanSeedMessage` calls
 `encodePreSeedToPreHash(preSeed, ...)`. For hashBitSize ∈ {64, 128} the
@@ -450,15 +451,139 @@ the SPD.
 
 ---
 
-### M2 — Decoding is a 2→1 byte tree → narrow-pipe before the final shuffle *(static — **open**)*
+### M2 — Decoding is a 2→1 byte tree → narrow-pipe before the final shuffle *(static — **mitigated** in commit `db81a40`; decode-tree topology itself unchanged)*
 
-> **Status (2026-05-28).** Unchanged. The decode step is still
-> `2 bytes → 1 byte` per round, with no inter-round mixing. Per §7 this
-> "probably can't be fixed without giving up the fast lookup-only design"
-> — the suggested next step is to run the experiment in §4.7 (count
-> distinct intermediate buffers after the first decode round across ~10⁶
-> random 32-byte messages) to quantify how narrow the pipe actually is in
-> practice. The experiment has not been run.
+> **Status (2026-05-28).** Partially addressed by commit `db81a40
+> fix(hashing): cryptanalysis issues addressed`. The fix removes `64`
+> from the supported hash bit sizes (now
+> `SupportedHashBitSize = 128 | 256 | 512 | 1024`), which guarantees
+> `hashBitSize/8 > SEED_SIZE = 8` at every supported size. The downstream
+> effects:
+>
+> - In `hashSmallerThanSeedMessage`, the `encodePreSeedToPreHash` loop
+>   now always runs at least once, producing a `preHash` buffer of size
+>   `hashBitSize/8 * 2 ≥ 32` bytes — strictly larger than the
+>   `preSeed` (16 bytes). The state going into the final
+>   `shuffleBuffer` + `decode` is now wider than the output (wide-pipe
+>   construction).
+> - In `hashBiggerThanHashMessage`, the chain `decodeMessageUntilSizeInBytes
+>   → simpleChainDecodeMessageUntilSizeInBytes` now performs at least one
+>   real decode round between `hashSize` and `SEED_SIZE` (it would have
+>   been a no-op at `hashBitSize=64`), adding mixing depth.
+> - In `hashMessageSizedBetweenSeedAndHash`, the same wide-pipe property
+>   holds for `preHash`.
+>
+> What is **not** fixed: the structural narrow-pipe topology of
+> `decodeMessageUntilSizeInBytes` itself. The decode is still
+> `2 bytes → 1 byte` per round with no cross-position interaction within
+> a layer — byte `i` of the level-`k` decode tree still depends on at
+> most bytes `[2^k · i, 2^k · (i+1))` of the input and on nothing else.
+> The wide-pipe outer construction raises the cost of an internal-state
+> collision attack (intermediate state is now ≥ 2× output size at every
+> supported `hashBitSize`), but the decode tree's per-subtree
+> independence — the structural property the original finding called
+> out — is unchanged. Commit message acknowledges this: "I have
+> nonetheless to assess if this approach is sound".
+>
+> **Why the three changes in `db81a40` (and the surrounding fix cluster)
+> don't close M2 for same-length, same-path collisions.** It is tempting
+> to read (a) keyed domain separation by size (M3), (b) per-round and
+> per-oddness `seedGenerator.newSeed()` calls, and (c) `hashBitSize/8 >
+> SEED_SIZE` together as a full defense. Each addresses a *different*
+> attack vector:
+>
+> 1. **Domain separation by size** prevents cross-path collisions. Two
+>    messages flowing through the *same* dispatch path receive the same
+>    seed-derived prelude byte (e.g. `domainPreludes.big`), so this
+>    defense does not engage for same-length messages.
+> 2. **Seed burning per decode round and per oddness** prevents
+>    cross-length collisions and the `M = decoded(M')` family (M4). Two
+>    messages of *identical* `byteLength` have identical odd-checks and
+>    identical iteration counts in `decodeMessageUntilSizeInBytes` — so
+>    the `seedGenerator` state after the decode is the same for both.
+>    The defense does not engage for same-length collisions.
+> 3. **`hashBitSize/8 > SEED_SIZE`** guarantees a wide-pipe outer
+>    construction (`preHash` is 2× output, the final shuffle operates on
+>    that wider state). But two messages that already collide at
+>    `hashSizedBuffer` enter the wide-pipe with the same value → same
+>    `seedSizedBuffer` (deterministic chain-decode) → same
+>    `seedGenerator` state at the post-decode `encode(...)` calls → same
+>    `preHash` and `preSeed` → same final hash. Wide-pipe does not
+>    repair a collision that occurred before the pipe.
+>
+> **Concrete same-length attack sketch (big-message path).** Take a
+> 1024-byte message at `hashBitSize=256`. Tracing
+> `decodeMessageUntilSizeInBytes(prelude ‖ M, 32, sg)`: the prelude makes
+> the input 1025 bytes (odd), so 5 decode iterations carry the trailing
+> odd byte forward, terminating with a 33-byte buffer. The final step
+> `[decode(b[0..2]), ...b[2..33]]` produces a 32-byte
+> `hashSizedBuffer` where:
+>
+> - `hashSizedBuffer[0] = decode(b[0], b[1])` — depends on the first 63
+>   bytes of the (prefixed) message (deeper subtree because two top-level
+>   bytes are decoded together).
+> - `hashSizedBuffer[i]` for `i ∈ [1, 31]` — depends on a *single*
+>   32-byte subtree of the original message, disjoint from the other
+>   output positions. Specifically, `hashSizedBuffer[i]` reflects roughly
+>   bytes `[63 + 32·(i−1), 63 + 32·i)` of `M` (modulo the odd-carry
+>   bookkeeping).
+>
+> The attacker picks one non-zero output position, e.g. `i = 1`, and
+> varies `M[63..95]` while keeping every other byte of `M` fixed. After
+> the M1 fix the SPD lanes are permutations, so `decode(a, ·)` is
+> injective at fixed `a` — but `decode(·, ·)` viewed as a single
+> `{0,1}^16 → {0,1}^8` function is still 256-to-1 on average across all
+> input pairs. Composed through the depth-5 subtree, the function
+> `M[63..95] → hashSizedBuffer[1]` has codomain `{0,1}^8`. By birthday
+> on 256 values, **~16 random trials of the 32-byte segment** find a
+> pair `(M_seg, M'_seg)` that produces the same `hashSizedBuffer[1]`.
+> Because every other input byte is identical, every other output byte
+> of `hashSizedBuffer` is also identical → full `hashSizedBuffer`
+> collision → identical `seedSizedBuffer`, identical
+> `seedGenerator` state, identical `preHash`/`preSeed` → identical
+> final 256-bit hash. **Total cost ≈ 2⁴, vs. the ~2¹²⁸ birthday bound
+> on the output.**
+>
+> The attack generalizes: for any message length that produces a decode
+> tree of depth ≥ 2, each non-leftmost output byte position is the
+> root of an independent subtree, and the same birthday-on-256 argument
+> applies. The leftmost output position (position 0) is structurally
+> stronger because it depends on a wider subtree, but the attacker is
+> free to target any other position.
+>
+> **Suggested empirical confirmation** (the §4.7 experiment, made
+> concrete for M2): run ~32 random 32-byte values for `M[63..95]` against
+> a fixed surrounding 1024-byte message at `hashBitSize=256`, hashing
+> each. With probability ≈ 1, two of them collide on `hashSizedBuffer[1]`
+> — and therefore on the full hash. If the probe is run and the
+> collision is empirically observed, that promotes M2's status from
+> *static* to *verified*.
+>
+> **Possible structural fixes for the C++ port** (sketch — none have
+> been designed in detail):
+>
+> - **Interleave a mixing step between decode rounds.** A small ARX or
+>   sponge-style absorption pass that touches every byte of the
+>   intermediate buffer between consecutive decodes would destroy the
+>   per-subtree independence. Costs speed; matches how modern hashes
+>   defeat narrow-pipe attacks.
+> - **Make each decode round seed-dependent.** Currently `decode` is a
+>   pure SPD lookup with no seed input. If each round used a fresh seed
+>   from `seedGenerator` to permute the buffer (or to choose between
+>   multiple SPD lanes), the per-position function would no longer be a
+>   pure function of the local subtree — it would depend on the global
+>   seed-chain state, which differs the moment any earlier byte differs.
+> - **Use the wide-pipe property earlier.** The current outer
+>   construction is wide-pipe but the *narrow-pipe* phase (the decode
+>   tree) happens *before* any mixing. Restructuring so that the
+>   decode tree itself runs on a wider intermediate state (e.g. retain
+>   both halves of each decode and mix them before discarding) would
+>   shift the construction from "narrow-pipe then wide-pipe" to
+>   "wide-pipe throughout".
+>
+> All three options have ripples through `Transcoder.decode` and the
+> seed-discipline accounting, and need to be assessed against the
+> diffusion-mean tests in `test/hashing/`. Tracked as open work.
 
 **Where:** `decodeMessageUntilSizeInBytes` performs a chain of `decode`
 calls. Each `decode` step is `2 bytes → 1 byte` via the high SPD lookup.
@@ -640,15 +765,21 @@ separation (M3). Alternatively, mask: `... & ((1n << BigInt(hashBitSize)) - 1n)`
 
 ---
 
-### L2 — `hashMessageSizedBetweenSeedAndHash` unreachable for hashBitSize=64 *(static — **open**)*
+### L2 — `hashMessageSizedBetweenSeedAndHash` unreachable for hashBitSize=64 *(static — **fixed** in commit `db81a40`)*
 
-> **Status (2026-05-28).** Unchanged. `type HashBitSize = 64 | 128 | 256 | 512 | 1024`
-> (`src/hashing/shi7.ts:222`) still permits `64`, and the dispatch math
-> still leaves the "between seed and hash" path unreachable at that size.
-> Newly: at hashBitSize=64 this also produces the residual H2 buffer
-> aliasing (see above). The cleanest single fix is to remove `64` from
-> the type union — closing both L2 and the H2 residual in one change.
-> 64-bit hashes are below modern minimums anyway.
+> **Status (2026-05-28).** Fixed in commit `db81a40 fix(hashing):
+> cryptanalysis issues addressed`. The `HashBitSize` type union was
+> renamed to `SupportedHashBitSize` (`src/hashing/shi7.ts:222`) and now
+> reads `128 | 256 | 512 | 1024` — `64` is no longer accepted. With
+> `SEED_SIZE = 8` (i.e. seed size in bytes) and every supported
+> `hashBitSize/8 ≥ 16`, the "between seed and hash" range
+> `(SEED_SIZE, hashBitSize/8)` is always non-empty, so
+> `hashMessageSizedBetweenSeedAndHash` is reachable at every supported
+> hash size. The same change also closes the H2 residual case above.
+> The author's commit message notes that smaller hashes could be
+> reintroduced later via "a new step having its own domain for hash
+> reduction", but that approach is flagged as not yet assessed for
+> soundness.
 
 For hashBitSize=64, `hashBitSize/8 = 8 = SEED_SIZE`. The condition
 `message.byteLength <= 8` catches messages of length 8, and
@@ -824,14 +955,18 @@ The original priority order, annotated with status:
 7. **Reconsider M2** (decode tree topology). Probably can't be fixed
    without giving up the fast lookup-only design — but at least
    measure how bad it actually is in practice (see §4.7 suggested
-   experiment). — **Open**. The experiment has not been run.
+   experiment). — **Mitigated** (`db81a40`): removing `64` from the
+   supported hash bit sizes guarantees a wide-pipe outer construction
+   at every supported `hashBitSize`. The decode-tree topology itself is
+   unchanged; the §4.7 experiment has still not been run.
 8. **Add the missing tests** in §4 to the suite as guardrails for the
    C++ port. — **Open**. The §4 gaps remain.
 
-Items 1–4 and 6 have all landed. Items 5, 7, and 8 are the substance
-of a v2 design and remain open. The minor L2/H2-residual cleanup
-(remove `64` from the `HashBitSize` union) was not on the original
-priority list and is also still open.
+Items 1–4, 6, and (mitigation half of) 7 have landed. Item 5 and the
+structural half of 7 are the substance of a v2 design and remain open;
+item 8 is also open. The L2 and residual-H2 cleanup (removing `64`
+from the `HashBitSize` union — now `SupportedHashBitSize`) landed in
+`db81a40` as a side effect of the M2 mitigation.
 
 ## 8. Update log
 
@@ -850,23 +985,22 @@ newest):
 | `d1c6d9a`  | M3 (iteration)                        | Subsequent refinement of domain separation.                                                                        |
 | `270b416`  | M3 (finalized)                        | Final domain-separation design: `initializeDomainPreludes` produces 4 unique seed-derived tags. Side effect: H2 (≥128-bit) and M4 substantially strengthened. |
 | `f35507a`  | H1 (documentation only)               | Withdrew ITS / quantum-immune marketing claims from the README. Structural H1 fix deferred.                        |
+| `db81a40`  | **L2**, **H2 (residual)**, **M2** (mitigation) | Removed `64` from supported hash bit sizes (`HashBitSize` → `SupportedHashBitSize = 128 \| 256 \| 512 \| 1024`). Closes L2 and the residual H2 buffer-aliasing case at hashBitSize=64. Mitigates M2 by guaranteeing `hashBitSize/8 > SEED_SIZE` at every supported size, making the outer construction wide-pipe; the decode-tree topology itself is unchanged. |
 
 **Open findings as of 2026-05-28:**
 
 - **H1** — structural; the 64-bit seed-width decision is the biggest
   call before the C++ port.
-- **H2 (residual)** — the buffer-aliasing case at `hashBitSize=64`
-  still applies (the C1 fix didn't reach that size).
-- **M2** — narrow-pipe decode tree; requires architectural change.
-- **L2** — dead "between seed and hash" path at `hashBitSize=64`.
+- **M2 (structural half)** — the decode tree is still `2→1` byte with
+  no cross-position interaction within a layer. Mitigated for now by
+  the wide-pipe outer construction; a full fix (interleaving a mixing
+  step inside the decode tree) requires architectural change and is
+  deferred.
 - **§4 test gaps** — particularly: output bit-width assertion,
   cross-path collision tests, statistical batteries (NIST / dieharder /
   PractRand), worst-case (not mean) diffusion, key-recovery
   consistency tests, edge-size boundary tests, SPD value-presence
   test.
-
-The H2-residual and L2 issues both vanish if `64` is removed from the
-`HashBitSize` union — a one-line change with no other consequences.
 
 ---
 
@@ -879,10 +1013,16 @@ quantum-resistance claim — are out of scope here.*
 *Update note (2026-05-28): the status annotations and §8 update log
 were added after the original report, by another language-model pass
 that cross-checked each finding against the current codebase and the
-intervening commit cluster. The original analysis text is preserved in
-§3 for traceability; only the per-finding headings and the indented
-status blocks at the top of each section are additions. Verify before
-acting on any specific claim — particularly the residual-H2 case at
-hashBitSize=64 (which the C1 fix did not reach), and the M4
-"strengthened" framing (no direct M4 commit; the strengthening comes
-indirectly from the M3 keyed-tag construction).*
+intervening commit cluster. A subsequent pass on the same date
+incorporated commit `db81a40`, which removed `64` from the supported
+hash bit sizes and thereby closed L2 and the residual H2 case while
+mitigating M2 (the outer construction is now wide-pipe at every
+supported size, though the decode tree itself is unchanged). The
+original analysis text is preserved in §3 for traceability; only the
+per-finding headings and the indented status blocks at the top of each
+section are additions. Verify before acting on any specific claim —
+particularly the M2 "mitigated" framing (the structural narrow-pipe
+property of the decode tree itself is unchanged; the mitigation is the
+guarantee of a wide-pipe outer construction) and the M4 "strengthened"
+framing (no direct M4 commit; the strengthening comes indirectly from
+the M3 keyed-tag construction).*
