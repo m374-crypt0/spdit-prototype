@@ -74,17 +74,19 @@ export class Shi7 {
   }
 
   private hashSmallerThanSeedMessage(message: Readonly<Buffer<ArrayBuffer>>) {
+    const messageWithDomain = this.prefixDomainByteToMessage(this.domainPreludes.small, message)
     const seedGenerator = new SplitMix64(this.seed_)
     const preSeedSize = Shi7.SEED_SIZE * SPD.DIMENSIONAL_FACTOR
-    const preSeed = this.encodeMessageUntilSizeInByte(message, seedGenerator, preSeedSize)
+    const preSeed = this.encodeMessageUntilSizeInByte(messageWithDomain, seedGenerator, preSeedSize)
     const preHash = this.encodePreSeedToPreHash(preSeed, seedGenerator)
 
     return this.hashMessage(preSeed, preHash, seedGenerator)
   }
 
   private hashBiggerThanHashMessage(message: Readonly<Buffer<ArrayBuffer>>) {
+    const messsageWithDomain = this.prefixDomainByteToMessage(this.domainPreludes.big, message)
     const seedGenerator = new SplitMix64(this.seed_)
-    const hashSizedBuffer = this.decodeMessageUntilSizeInBytes(message, this.hashBitSize() / Shi7.BYTE_BITS, seedGenerator)
+    const hashSizedBuffer = this.decodeMessageUntilSizeInBytes(messsageWithDomain, this.hashBitSize() / Shi7.BYTE_BITS, seedGenerator)
     const seedSizedBuffer = this.simpleChainDecodeMessageUntilSizeInBytes(hashSizedBuffer, Shi7.SEED_SIZE)
     const preHash = this.transcoder().encode(hashSizedBuffer, { seed: seedGenerator.newSeed() })
     const preSeed = this.transcoder().encode(seedSizedBuffer, { seed: seedGenerator.newSeed() })
@@ -93,10 +95,11 @@ export class Shi7 {
   }
 
   private hashMessageSizedBetweenSeedAndHash(message: Readonly<Buffer<ArrayBuffer>>) {
+    const messageWithDomain = this.prefixDomainByteToMessage(this.domainPreludes.medium, message)
     const seedGenerator = new SplitMix64(this.seed_)
-    const seedSizedBuffer = this.decodeMessageUntilSizeInBytes(message, Shi7.SEED_SIZE, seedGenerator)
+    const seedSizedBuffer = this.decodeMessageUntilSizeInBytes(messageWithDomain, Shi7.SEED_SIZE, seedGenerator)
     const preHashSize = this.hashBitSize() / Shi7.BYTE_BITS * SPD.DIMENSIONAL_FACTOR
-    const preHash = this.encodeMessageUntilSizeInByte(message, seedGenerator, preHashSize)
+    const preHash = this.encodeMessageUntilSizeInByte(messageWithDomain, seedGenerator, preHashSize)
     const preSeed = this.transcoder().encode(seedSizedBuffer, { seed: seedGenerator.newSeed() })
 
     return this.hashMessage(preSeed, preHash, seedGenerator)
