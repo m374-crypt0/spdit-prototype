@@ -14,6 +14,12 @@ Independent structural review of `src/hashing/shi7.ts` and its dependencies
 > Probe scripts used to generate this report have been removed because of their
 > temporary meaning. To ensure a finding is *verifier*, one must create a probe
 > script to assess the fix regarding this finding.
+> **Exception — M2 is now a permanent verification probe.** Because M2 is
+> verified *and unfixed*, its probe is retained as a regression-style guard in
+> the suite (`test/hashing/probes.test.ts`) plus a standalone demonstration
+> (`draft/m2-probe-check.ts`). It currently asserts the collision *exists*; once
+> a structural fix lands it should be inverted to assert the collision is gone.
+> See [`docs/cryptanalysis-shi7-m2.md`](./cryptanalysis-shi7-m2.md).
 
 ## 0. Threat model assumed
 
@@ -41,7 +47,7 @@ model, what attacks does the construction admit?*
 | H2  | High       | `preSeed` and `preHash` buffers alias for hashBitSize ≤ 128 small msgs  | **Fixed** (`f6b9102` for ≥128; `db81a40` removed the residual 64-bit case) |
 | H3  | High       | `shuffleStorage` is the *naive* shuffle, not Fisher-Yates — biased      | **Fixed** (`d033a50`)                                   |
 | M1  | Medium     | SPD `overwriteFewValuesInAllLanes` destroys uniform distribution and admits a rare runtime crash | **Fixed by removal** (`edefb7a`)         |
-| M2  | Medium     | Decode is a 2→1 byte tree → narrow-pipe diffusion before the final shuffle | **Mitigated** (`db81a40`); wide-pipe now guaranteed, decode-tree topology unchanged |
+| M2  | Medium → **High** | Decode is a 2→1 byte tree → narrow-pipe diffusion before the final shuffle | **Verified — open** (2026-05-29); same-length full-hash collision found in ~2⁴ hashes. The `db81a40` wide-pipe mitigation does not engage. Dedicated write-up: [cryptanalysis-shi7-m2.md](./cryptanalysis-shi7-m2.md) |
 | M3  | Medium     | No domain separation between the four dispatch paths                    | **Fixed** (`75a93ef` → `270b416`); stronger than recommended (keyed tags) |
 | M4  | Medium     | "decoded-message vs message" collision avoidance is a structural patch, not an invariant | **Strengthened by M3 fix**; seed-burn patches retained |
 | L1  | Low        | Empty-message hash can be `-1n` (all-zero `hashBuffer`)                 | **Fixed** (during M3 work)                              |
@@ -61,6 +67,18 @@ itself is unchanged), 1 is meaningfully strengthened (M4). H1 is open
 structurally but had its security claims withdrawn from the README.
 Per-finding status notes are inline in §3 below; the priority order in §7
 has been updated; a fix-commit summary is in §8.
+
+**Update (2026-05-29).** **M2 is now verified, not merely static.** A probe
+suite (`test/hashing/probes.test.ts`) and a standalone demonstration
+(`draft/m2-probe-check.ts`) reproducibly find a **same-length full 256-bit
+hash collision in ~10–25 hash evaluations** against the current code. The
+`db81a40` "mitigation" (wide-pipe *outer* construction) does not engage,
+because M2 produces the internal-state collision *before* the pipe. M2's
+severity is reassessed **Medium → High** and it remains **open** (no
+structural fix landed). Full analysis, the concrete colliding messages, a
+plausible risk scenario, and why the originally-suggested §4.7 experiment was
+misleading are in the dedicated write-up
+[`docs/cryptanalysis-shi7-m2.md`](./cryptanalysis-shi7-m2.md).
 
 ## 2. Methodology and scope
 
@@ -451,7 +469,20 @@ the SPD.
 
 ---
 
-### M2 — Decoding is a 2→1 byte tree → narrow-pipe before the final shuffle *(static — **mitigated** in commit `db81a40`; decode-tree topology itself unchanged)*
+### M2 — Decoding is a 2→1 byte tree → narrow-pipe before the final shuffle *(**verified** 2026-05-29 — open; severity Medium → High)*
+
+> **Status (2026-05-29). VERIFIED — OPEN.** The collision sketched in the
+> 2026-05-28 block below has been reproduced against the current code:
+> `test/hashing/probes.test.ts` and `draft/m2-probe-check.ts` find a
+> same-length full 256-bit hash collision in ~10–25 hash evaluations, for
+> every tested seed. The decode tree's per-subtree independence is asserted
+> directly (varying one input window changes exactly one output byte). The
+> `db81a40` wide-pipe mitigation does **not** engage — the internal-state
+> collision is produced *before* the pipe. Severity reassessed **Medium →
+> High**. No structural fix has landed. **The full, current treatment lives in
+> [`docs/cryptanalysis-shi7-m2.md`](./cryptanalysis-shi7-m2.md)**; the
+> 2026-05-28 block and the original analysis below are retained for
+> traceability and are superseded by it.
 
 > **Status (2026-05-28).** Partially addressed by commit `db81a40
 > fix(hashing): cryptanalysis issues addressed`. The fix removes `64`
@@ -559,6 +590,14 @@ the SPD.
 > collision is empirically observed, that promotes M2's status from
 > *static* to *verified*.
 >
+> **✅ Done (2026-05-29) — M2 is now VERIFIED.** The structured attack was
+> implemented (`test/hashing/probes.test.ts`, `draft/m2-probe-check.ts`),
+> using a 127-byte depth-2 message rather than the 1024-byte depth-5 sketch
+> above — the principle is identical and the smaller tree keeps the test fast.
+> A same-length full 256-bit hash collision is found in ~10–25 hash
+> evaluations for every tested seed. See
+> [`docs/cryptanalysis-shi7-m2.md`](./cryptanalysis-shi7-m2.md).
+>
 > **Possible structural fixes for the C++ port** (sketch — none have
 > been designed in detail):
 >
@@ -623,6 +662,17 @@ the test suite measures but does not bound formally.
 hashBitSize=256; after the first decode round, count how many distinct
 intermediate buffers exist among them. If the count is much lower than
 the input count, the narrow pipe is biting.
+
+> [!CAUTION]
+> **This particular experiment is vacuous — do not read its result as
+> safety.** At `hashBitSize=256` a 32-byte message never enters the decode
+> loop; its intermediate buffer is `[decode(domain, msg[0]), msg[1..31]]`,
+> which is *injective*, so the distinct count always equals the input count
+> (it was confirmed at `1,000,000 → 1,000,000`). The experiment exercises the
+> shallowest possible big-path case, never the per-subtree independence M2 is
+> about. The correct probe — the depth-≥2 structured attack — lives in
+> `test/hashing/probes.test.ts` and *does* find collisions. See
+> [`docs/cryptanalysis-shi7-m2.md`](./cryptanalysis-shi7-m2.md) §5.
 
 A real fix would interleave the decode tree with a mixing step that
 introduces cross-position interaction (e.g. a small ARX or sponge-style
@@ -955,10 +1005,16 @@ The original priority order, annotated with status:
 7. **Reconsider M2** (decode tree topology). Probably can't be fixed
    without giving up the fast lookup-only design — but at least
    measure how bad it actually is in practice (see §4.7 suggested
-   experiment). — **Mitigated** (`db81a40`): removing `64` from the
-   supported hash bit sizes guarantees a wide-pipe outer construction
-   at every supported `hashBitSize`. The decode-tree topology itself is
-   unchanged; the §4.7 experiment has still not been run.
+   experiment). — **Verified, open** (2026-05-29). The experiment was
+   run — but the §4.7 form (count distinct intermediate buffers over
+   random 32-byte messages) is *vacuous*: that map is injective, so it
+   can only ever report "no collapse." The correct probe
+   (`test/hashing/probes.test.ts`) exercises the depth-≥2 structured
+   attack and finds a same-length full-hash collision in ~10–25 hashes.
+   The `db81a40` wide-pipe mitigation does not engage. A structural fix
+   (interleave a mixing step into the decode tree, or make each round
+   seed-dependent) is still owed and remains v2 / C++-port work. See
+   [`docs/cryptanalysis-shi7-m2.md`](./cryptanalysis-shi7-m2.md).
 8. **Add the missing tests** in §4 to the suite as guardrails for the
    C++ port. — **Open**. The §4 gaps remain.
 
@@ -987,15 +1043,20 @@ newest):
 | `f35507a`  | H1 (documentation only)               | Withdrew ITS / quantum-immune marketing claims from the README. Structural H1 fix deferred.                        |
 | `db81a40`  | **L2**, **H2 (residual)**, **M2** (mitigation) | Removed `64` from supported hash bit sizes (`HashBitSize` → `SupportedHashBitSize = 128 \| 256 \| 512 \| 1024`). Closes L2 and the residual H2 buffer-aliasing case at hashBitSize=64. Mitigates M2 by guaranteeing `hashBitSize/8 > SEED_SIZE` at every supported size, making the outer construction wide-pipe; the decode-tree topology itself is unchanged. |
 
-**Open findings as of 2026-05-28:**
+**Open findings as of 2026-05-29:**
 
 - **H1** — structural; the 64-bit seed-width decision is the biggest
   call before the C++ port.
-- **M2 (structural half)** — the decode tree is still `2→1` byte with
-  no cross-position interaction within a layer. Mitigated for now by
-  the wide-pipe outer construction; a full fix (interleaving a mixing
-  step inside the decode tree) requires architectural change and is
-  deferred.
+- **M2 (verified, open; severity Medium → High)** — the decode tree is
+  still `2→1` byte with no cross-position interaction within a layer. As
+  of 2026-05-29 this is no longer hypothetical: a same-length full-hash
+  collision is reproducibly found in ~10–25 hashes
+  (`test/hashing/probes.test.ts`, `draft/m2-probe-check.ts`). The
+  wide-pipe outer construction does not engage. A full fix (interleaving
+  a mixing step inside the decode tree, or making each decode round
+  seed-dependent) requires architectural change and is deferred to v2 /
+  the C++ port. Dedicated write-up:
+  [`docs/cryptanalysis-shi7-m2.md`](./cryptanalysis-shi7-m2.md).
 - **§4 test gaps** — particularly: output bit-width assertion,
   cross-path collision tests, statistical batteries (NIST / dieharder /
   PractRand), worst-case (not mean) diffusion, key-recovery
@@ -1026,3 +1087,14 @@ property of the decode tree itself is unchanged; the mitigation is the
 guarantee of a wide-pipe outer construction) and the M4 "strengthened"
 framing (no direct M4 commit; the strengthening comes indirectly from
 the M3 keyed-tag construction).*
+
+*Update note (2026-05-29): M2 was promoted from static/mitigated to
+**verified** and reassessed **Medium → High**. The "mitigated" framing
+above is now known to be misleading — the wide-pipe outer construction
+does not prevent the collision, which forms before the pipe. A probe
+suite (`test/hashing/probes.test.ts`) and a standalone demonstration
+(`draft/m2-probe-check.ts`) reproduce a same-length full-hash collision in
+~10–25 hash evaluations. The current, authoritative treatment of M2 is the
+dedicated file [`docs/cryptanalysis-shi7-m2.md`](./cryptanalysis-shi7-m2.md);
+the M2 text in §1, §3, §7, and §8 here has been annotated to point to it but
+the original wording is otherwise preserved.*

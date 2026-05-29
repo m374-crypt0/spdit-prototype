@@ -77,8 +77,19 @@ The doc-only commit `f35507a docs: do not overclaim ITS and quntum
 resistance anymore` was the H1-driven retraction.
 
 H1 itself (the 64-bit seed ceiling) is **not** structurally fixed — only the
-overclaims were walked back. Cryptanalysis findings H2, M2, M4, and the
+overclaims were walked back. Cryptanalysis findings M2, M4, and the
 "missing tests" gap are also outstanding; the doc's §7 lists a recommended
 priority order. Note that the cryptanalysis itself was an AI static review,
 not a human cryptanalyst's audit (the doc says so explicitly in its closing
-note) — its findings are useful hypotheses, not proofs.
+note) — most findings are useful hypotheses, not proofs.
+
+**M2 update (2026-05-29).** M2 is the exception: it is now **verified** and
+reassessed **Medium → High**. A probe suite (`test/hashing/probes.test.ts`)
+and a standalone demo (`draft/m2-probe-check.ts`) reproducibly find a
+same-length full 256-bit hash collision in ~10–25 hash evaluations against the
+current code — a practical break of collision and second-preimage resistance on
+the big-message path. The earlier `db81a40` "mitigation" (wide-pipe outer
+construction) does **not** engage; the collision forms before the pipe. No
+structural fix has landed. Authoritative write-up:
+`docs/cryptanalysis-shi7-m2.md`. The `recordIntermediateBuffer` option on
+`Shi7` is a test-only observability hook added for this verification.

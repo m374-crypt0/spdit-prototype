@@ -9,7 +9,10 @@ export class Shi7 {
 
     this.hashBitSize_ = options?.hashBitSize ?? 256
     this.domainPreludes = this.initializeDomainPreludes()
+    this.recordIntermediateBuffer = options?.recordIntermediateBuffer
   }
+
+  private recordIntermediateBuffer?: (buffer: Readonly<Buffer<ArrayBuffer>>) => void
 
   hashBitSize() {
     return this.hashBitSize_
@@ -144,11 +147,13 @@ export class Shi7 {
     }
 
     const extraBytes = b.byteLength - sizeInBytes
-    const seedSizedBuffer = Buffer.from([
+    const newBuffer = Buffer.from([
       ...this.transcoder().decode(b.subarray(0, extraBytes * SPD.DIMENSIONAL_FACTOR)),
       ...b.subarray(extraBytes * SPD.DIMENSIONAL_FACTOR)])
 
-    return seedSizedBuffer
+    this.recordIntermediateBuffer && this.recordIntermediateBuffer(newBuffer)
+
+    return newBuffer
   }
 
   private encodeMessageUntilSizeInByte(message: Readonly<Buffer<ArrayBuffer>>,
@@ -223,7 +228,8 @@ export type SupportedHashBitSize = 128 | 256 | 512 | 1024
 
 type Options = {
   seed?: bigint,
-  hashBitSize?: SupportedHashBitSize
+  hashBitSize?: SupportedHashBitSize,
+  recordIntermediateBuffer?: (buffer: Readonly<Buffer<ArrayBuffer>>) => void
 }
 
 type DomainPreludes = {
