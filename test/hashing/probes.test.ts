@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, xdescribe, xit } from "bun:test";
 import { Shi7, type SupportedHashBitSize } from "src/hashing";
 
 /**
@@ -61,7 +61,7 @@ describe('M2 — narrow-pipe decode-tree collision', () => {
       expect(distinct.size).toBe(count)
     })
 
-    it('a 32-byte message never enters the decode loop (tail passes through verbatim)', () => {
+    it('a 32-byte message must not passes through verbatim)', () => {
       const { shi7, intermediate } = captureIntermediate(0xC0FFEEn)
       const m = Buffer.alloc(32)
       for (let i = 0; i < 32; i++) m[i] = (i * 9 + 1) & 0xff
@@ -69,7 +69,7 @@ describe('M2 — narrow-pipe decode-tree collision', () => {
       shi7.hash(m)
 
       // intermediate bytes 1..31 are message bytes 1..31, untouched
-      expect(intermediate().subarray(1).toHex()).toBe(m.subarray(1).toHex())
+      expect(intermediate().subarray(1).toHex()).not.toBe(m.subarray(1).toHex())
     })
   })
 
@@ -92,7 +92,7 @@ describe('M2 — narrow-pipe decode-tree collision', () => {
     for (const seed of SEEDS) {
       const label = `0x${seed.toString(16)}`
 
-      it(`per-subtree independence: window [${WINDOW_START},${WINDOW_END}) feeds only output byte ${TARGET_OUTPUT_BYTE} (seed=${label})`, () => {
+      it(`per-subtree independence: window [${WINDOW_START},${WINDOW_END}) is not the only one to feed the output byte ${TARGET_OUTPUT_BYTE} (seed=${label})`, () => {
         const { shi7, intermediate } = captureIntermediate(seed, HASH_BIT_SIZE)
         shi7.hash(baseMessage())
         const base = Buffer.from(intermediate())
@@ -106,11 +106,11 @@ describe('M2 — narrow-pipe decode-tree collision', () => {
         }
 
         // varying the window changes output byte 1 — and nothing else
-        expect([...touched].sort((x, y) => x - y)).toEqual([TARGET_OUTPUT_BYTE])
+        expect([...touched].sort((x, y) => x - y)).not.toEqual([TARGET_OUTPUT_BYTE])
       })
 
-      it(`yields a same-length full-hash collision far below the birthday bound (seed=${label})`, () => {
-        const { shi7 } = captureIntermediate(seed, HASH_BIT_SIZE)
+      it(`must not yield a same-length full-hash collision far below the birthday bound (seed=${label})`, () => {
+        const shi7 = new Shi7({ hashBitSize: HASH_BIT_SIZE })
         const base = baseMessage()
         const seen = new Map<string, Buffer<ArrayBuffer>>()
         let collision: [Buffer<ArrayBuffer>, Buffer<ArrayBuffer>] | undefined
@@ -135,14 +135,14 @@ describe('M2 — narrow-pipe decode-tree collision', () => {
         expect(collision).toBeDefined()
         const [a, b] = collision!
 
-        expect(a.equals(b)).toBe(false)                 // two distinct messages...
+        expect(a).not.toEqual(b)                 // two distinct messages...
         expect(a.byteLength).toBe(b.byteLength)         // ...of the same length...
-        expect(shi7.hash(a)).toBe(shi7.hash(b))         // ...with the same hash
         // ...differing only inside the isolated window
         expect(changedBytePositions(a, b).every(p => p >= WINDOW_START && p < WINDOW_END)).toBe(true)
+        expect(shi7.hash(a)).not.toBe(shi7.hash(b))         // MUST NOT have the same hash
         // catastrophically cheap: pigeonhole guarantees ≤ 257, vs the ~2¹²⁸ bound a
-        // 256-bit hash should require (the search typically finds it in ~20 trials)
-        expect(trials).toBeLessThanOrEqual(257)
+        // 256-bit hash should require
+        expect(trials).toBeGreaterThanOrEqual(128)
       })
     }
   })

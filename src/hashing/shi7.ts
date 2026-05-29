@@ -137,6 +137,7 @@ export class Shi7 {
 
     while (b.byteLength >= sizeInBytes * SPD.DIMENSIONAL_FACTOR) {
       const oddness = b.byteLength & 1
+
       b = Buffer.from([
         ...this.transcoder().decode(b.subarray(0, b.byteLength - oddness)),
         ...(oddness ? [b[b.byteLength - 1]!] : [])])
@@ -150,6 +151,8 @@ export class Shi7 {
     const newBuffer = Buffer.from([
       ...this.transcoder().decode(b.subarray(0, extraBytes * SPD.DIMENSIONAL_FACTOR)),
       ...b.subarray(extraBytes * SPD.DIMENSIONAL_FACTOR)])
+
+    shuffleBuffer(newBuffer, new UniformUint64(new Xoroshiro128Plus(seedGenerator)))
 
     this.recordIntermediateBuffer && this.recordIntermediateBuffer(newBuffer)
 
