@@ -36,31 +36,6 @@ export class Shi7 {
     return this.hashMessageSizedBetweenSeedAndHash(message)
   }
 
-  initializeDomainPreludes(): DomainPreludes {
-    const d = new UniformUint64(new Xoroshiro128Plus(new SplitMix64(this.seed_)))
-    const randomByte = () => Number(d.newUint([0n, 255n]))
-    const uniqueBytes = new Set<number>
-
-    while (uniqueBytes.size < 4) {
-      uniqueBytes.clear()
-      uniqueBytes.add(randomByte())
-      uniqueBytes.add(randomByte())
-      uniqueBytes.add(randomByte())
-      uniqueBytes.add(randomByte())
-    }
-
-    return {
-      empty: uniqueBytes.values().toArray()[0]!,
-      small: uniqueBytes.values().toArray()[1]!,
-      medium: uniqueBytes.values().toArray()[2]!,
-      big: uniqueBytes.values().toArray()[3]!
-    }
-  }
-
-  private highSPD(): Readonly<SPD> {
-    return this.highSPD_ = this.highSPD_ ?? new SPD('high', { kind: 'seed', seed: this.seed_ })
-  }
-
   private hashEmptyMessage() {
     if (this.emptyMessageHash !== undefined)
       return this.emptyMessageHash
@@ -206,6 +181,31 @@ export class Shi7 {
     }
 
     return newBuffer
+  }
+
+  private initializeDomainPreludes(): DomainPreludes {
+    const d = new UniformUint64(new Xoroshiro128Plus(new SplitMix64(this.seed_)))
+    const randomByte = () => Number(d.newUint([0n, 255n]))
+    const uniqueBytes = new Set<number>
+
+    while (uniqueBytes.size < 4) {
+      uniqueBytes.clear()
+      uniqueBytes.add(randomByte())
+      uniqueBytes.add(randomByte())
+      uniqueBytes.add(randomByte())
+      uniqueBytes.add(randomByte())
+    }
+
+    return {
+      empty: uniqueBytes.values().toArray()[0]!,
+      small: uniqueBytes.values().toArray()[1]!,
+      medium: uniqueBytes.values().toArray()[2]!,
+      big: uniqueBytes.values().toArray()[3]!
+    }
+  }
+
+  private highSPD(): Readonly<SPD> {
+    return this.highSPD_ = this.highSPD_ ?? new SPD('high', { kind: 'seed', seed: this.seed_ })
   }
 
   private seed_: bigint
